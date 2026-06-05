@@ -22,7 +22,12 @@ apt-get install -y git python3 python3-venv python3-pip iptables nginx
 mkdir -p "${INSTALL_DIR}"
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
   git -C "${INSTALL_DIR}" fetch --all --prune
-  git -C "${INSTALL_DIR}" checkout "${BRANCH}"
+  if git -C "${INSTALL_DIR}" show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
+    git -C "${INSTALL_DIR}" checkout -B "${BRANCH}" "origin/${BRANCH}"
+  else
+    echo "[callsign] branch not found on origin: ${BRANCH}" >&2
+    exit 1
+  fi
   git -C "${INSTALL_DIR}" reset --hard "origin/${BRANCH}"
 else
   rm -rf "${INSTALL_DIR}"
