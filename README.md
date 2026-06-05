@@ -1,5 +1,7 @@
 # Callsign
 
+English (default) | [简体中文](README.zh-CN.md)
+
 Callsign: A lightweight HTTP/3 overlay network.
 
 Callsign is an open-source overlay networking prototype with a split control plane and data plane.
