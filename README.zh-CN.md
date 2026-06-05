@@ -7,10 +7,15 @@ Callsign 是一个轻量级 Overlay 网络原型。
 ## 服务端安装（一条命令）
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
 ```
 
-这条命令会自动完成：拉取/更新代码、安装依赖、生成 token、写入 systemd、启动服务。
+这条命令会自动完成：拉取/更新代码、读取/输入域名、写入域名到 nginx 配置、生成 token、写入 systemd、启动服务。
+
+可选参数：
+
+- `CALLSIGN_BRANCH=fast_iteration` 安装指定分支
+- `CALLSIGN_TRUST_CLOUDFLARE=1` 保留 nginx 的 Cloudflare 来源限制
 
 ## 客户端下载
 

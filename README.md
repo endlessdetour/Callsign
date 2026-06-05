@@ -7,10 +7,15 @@ Callsign is a lightweight overlay networking prototype.
 ## Server Install (One Command)
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
 ```
 
-This installs/updates server components, creates token, writes systemd units, and starts services.
+This installs/updates server components, asks/uses your domain, renders nginx config with that domain, creates token, writes systemd units, and starts services.
+
+Optional flags:
+
+- `CALLSIGN_BRANCH=fast_iteration` to install a specific branch
+- `CALLSIGN_TRUST_CLOUDFLARE=1` to keep Cloudflare-only source gating in nginx
 
 ## Client Downloads
 
