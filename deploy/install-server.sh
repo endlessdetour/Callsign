@@ -17,7 +17,7 @@ echo "[callsign] repo: ${REPO_URL} (${BRANCH})"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y git python3 python3-venv python3-pip iptables
+apt-get install -y git python3 python3-venv python3-pip iptables nginx
 
 mkdir -p "${INSTALL_DIR}"
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
@@ -60,6 +60,8 @@ install -m 644 "${INSTALL_DIR}/deploy/systemd/proxy-control.service" /etc/system
 install -m 644 "${INSTALL_DIR}/deploy/systemd/proxy-tunnel.service" /etc/systemd/system/proxy-tunnel.service
 
 systemctl daemon-reload
+systemctl enable nginx
+systemctl restart nginx
 systemctl enable callsign-nat.service proxy-control.service proxy-tunnel.service
 systemctl restart callsign-nat.service
 systemctl restart proxy-control.service
