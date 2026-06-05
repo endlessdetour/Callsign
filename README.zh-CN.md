@@ -17,6 +17,11 @@ wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/i
 - `CALLSIGN_BRANCH=fast_iteration` 安装指定分支
 - `CALLSIGN_TRUST_CLOUDFLARE=1` 保留 nginx 的 Cloudflare 来源限制
 
+默认行为：
+
+- 交互式执行：安装器会询问是否启用 Cloudflare-geo 限制（默认 `No`）
+- 非交互执行：默认不启用 Cloudflare-geo，只有显式传入 `CALLSIGN_TRUST_CLOUDFLARE=1` 才启用
+
 ## 客户端下载
 
 - Windows ARM64：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)

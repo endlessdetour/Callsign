@@ -17,6 +17,11 @@ Optional flags:
 - `CALLSIGN_BRANCH=fast_iteration` to install a specific branch
 - `CALLSIGN_TRUST_CLOUDFLARE=1` to keep Cloudflare-only source gating in nginx
 
+Default behavior:
+
+- Interactive shell: installer asks whether to enable Cloudflare geo gate (default is `No`)
+- Non-interactive shell: Cloudflare geo gate is disabled unless `CALLSIGN_TRUST_CLOUDFLARE=1` is explicitly set
+
 ## Client Downloads
 
 - Windows ARM64: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)

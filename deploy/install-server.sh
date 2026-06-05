@@ -10,7 +10,7 @@ INSTALL_DIR="${CALLSIGN_INSTALL_DIR:-/opt/callsign}"
 REPO_URL="${CALLSIGN_REPO_URL:-https://github.com/endlessdetour/Callsign.git}"
 BRANCH="${CALLSIGN_BRANCH:-main}"
 DOMAIN="${CALLSIGN_DOMAIN:-}"
-TRUST_CLOUDFLARE="${CALLSIGN_TRUST_CLOUDFLARE:-0}"
+TRUST_CLOUDFLARE="${CALLSIGN_TRUST_CLOUDFLARE:-}"
 ENV_FILE="/etc/proxy-server.env"
 TOKEN_FILE="/etc/callsign/access_token"
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/proxy-server.conf"
@@ -33,6 +33,29 @@ if [[ -z "${DOMAIN}" ]]; then
 fi
 
 echo "[callsign] domain: ${DOMAIN}"
+
+if [[ -z "${TRUST_CLOUDFLARE}" ]]; then
+  if [[ -t 0 ]]; then
+    read -r -p "[callsign] enable Cloudflare geo gate? [y/N]: " cf_answer
+    case "${cf_answer}" in
+      [Yy]|[Yy][Ee][Ss]) TRUST_CLOUDFLARE=1 ;;
+      *) TRUST_CLOUDFLARE=0 ;;
+    esac
+  else
+    TRUST_CLOUDFLARE=0
+  fi
+fi
+
+if [[ "${TRUST_CLOUDFLARE}" != "0" && "${TRUST_CLOUDFLARE}" != "1" ]]; then
+  echo "[callsign] CALLSIGN_TRUST_CLOUDFLARE must be 0 or 1." >&2
+  exit 1
+fi
+
+if [[ "${TRUST_CLOUDFLARE}" == "1" ]]; then
+  echo "[callsign] cloudflare gate: enabled"
+else
+  echo "[callsign] cloudflare gate: disabled"
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
