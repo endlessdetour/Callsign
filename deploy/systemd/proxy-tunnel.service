@@ -1,0 +1,16 @@
+[Unit]
+Description=Proxy Tunnel Plane
+After=network.target proxy-control.service callsign-nat.service
+Wants=proxy-control.service callsign-nat.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/callsign
+EnvironmentFile=/etc/proxy-server.env
+ExecStart=/opt/callsign/.venv/bin/python /opt/callsign/server/tunnel/app.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

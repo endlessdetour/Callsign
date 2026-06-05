@@ -1,0 +1,67 @@
+# Place this under server {} in your Nginx config.
+# TLS cert directives are omitted for brevity.
+
+upstream control_plane {
+    server 127.0.0.1:5000;
+}
+
+upstream tunnel_plane {
+    server 127.0.0.1:8443;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name overlay.example.com;
+
+    # ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    # ssl_certificate_key /etc/nginx/certs/privkey.pem;
+
+    # Optional: only trust Cloudflare origin traffic.
+    # Requires /etc/nginx/conf.d/cloudflare-geo.conf from deploy/nginx.cloudflare-geo.conf.example.
+    if ($from_cloudflare = 0) {
+        return 444;
+    }
+
+    location /api/ {
+        proxy_pass http://control_plane;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    # Do not expose health endpoints publicly by default.
+    # If you need external health checks, add strict source allowlists and token checks.
+
+    # Keep this path consistent with CALLSIGN_TUNNEL_PATH used by control/tunnel services.
+    location /connect-ws {
+        proxy_pass http://tunnel_plane/connect-ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600;
+    }
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+    return 444;
+}
+
+server {
+    listen 80;
+    server_name overlay.example.com;
+    if ($from_cloudflare = 0) {
+        return 444;
+    }
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    server_name _;
+    ssl_certificate     /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    return 444;
+}

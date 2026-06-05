@@ -1,0 +1,12 @@
+[Unit]
+Description=Callsign NAT and forwarding setup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/callsign-nat-setup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

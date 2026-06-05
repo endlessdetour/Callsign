@@ -1,0 +1,11 @@
+client_profiles.json
+*.log
+build/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+deploy/proxy-server.env
+*.ppk

@@ -1,0 +1,15 @@
+[Unit]
+Description=Proxy Control Plane
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/callsign
+EnvironmentFile=/etc/proxy-server.env
+ExecStart=/opt/callsign/.venv/bin/python /opt/callsign/server/control/app.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
