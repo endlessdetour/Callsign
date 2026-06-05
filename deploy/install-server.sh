@@ -70,7 +70,7 @@ upsert_env() {
 
 mkdir -p "${INSTALL_DIR}"
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
-  git -C "${INSTALL_DIR}" fetch --all --prune
+  git -C "${INSTALL_DIR}" fetch origin "+refs/heads/*:refs/remotes/origin/*" --prune
   if git -C "${INSTALL_DIR}" show-ref --verify --quiet "refs/remotes/origin/${BRANCH}"; then
     git -C "${INSTALL_DIR}" checkout -B "${BRANCH}" "origin/${BRANCH}"
   else
