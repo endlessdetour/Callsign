@@ -53,13 +53,13 @@ wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteratio
 
 ## 客户端下载
 
-- Windows ARM64：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)
-- Windows x64：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x64.zip)
-- Windows x86：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x86.zip)
+- Windows ARM64：[前往 Releases 下载](https://github.com/endlessdetour/Callsign/releases)
+- Windows x64：等待打包
+- Windows x86：等待打包
 
 说明：
-- ARM64 链接是当前主要目标。
-- 其他包你后续打好后按同样命名发布即可直接下载。
+- ARM64 是当前主要目标，在 Releases 页面获取最新的 `callsign-windows-arm64.zip`。
+- 其他包后续打好后按同样命名发布即可。
 
 ## 本地快速运行
 

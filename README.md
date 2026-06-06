@@ -68,13 +68,13 @@ health.
 
 ## Client Downloads
 
-- Windows ARM64: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)
-- Windows x64: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x64.zip)
-- Windows x86: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x86.zip)
+- Windows ARM64: [Download from Releases](https://github.com/endlessdetour/Callsign/releases)
+- Windows x64: pending build
+- Windows x86: pending build
 
 Notes:
-- ARM64 link is current target.
-- Other builds can be published later with the same link pattern.
+- ARM64 is the current target; grab the latest `callsign-windows-arm64.zip` from the Releases page.
+- Other builds can be published later with the same naming pattern.
 
 ## Quick Local Run
 
