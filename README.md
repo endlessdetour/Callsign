@@ -2,178 +2,53 @@
 
 English (default) | [简体中文](README.zh-CN.md)
 
-Callsign is a lightweight overlay networking prototype with a split control plane and data plane.
+Callsign is a lightweight overlay networking prototype.
 
-It focuses on fast protocol validation, strict token-based access control, and practical deployment behind a reverse proxy.
+## Server Install (One Command)
 
-## Features
+```bash
+wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
+```
 
-- Split architecture: Flask control plane + WebSocket tunnel plane + Windows client
-- Token-gated control and tunnel endpoints (`X-Access-Token` required)
-- Session bootstrap, heartbeat, and server-side validation flow
-- Echo mode for transport validation and tun mode for routed traffic
-- Windows GUI with tray controls, profile management, and single-instance guard
-- NAT persistence via systemd (`callsign-nat.service`) for Linux server boot recovery
+This installs/updates server components, asks/uses your domain, automatically requests a Let's Encrypt certificate (falls back to self-signed only if issuance fails), enables certificate auto-renewal, renders nginx config, creates token, writes systemd units, and starts services.
 
-## Architecture
+Optional flags:
 
-1. Control plane (`server/control`)
-- Bootstrap
-- Session issuance
-- Heartbeat and token validation
+- `CALLSIGN_BRANCH=fast_iteration` to install a specific branch
+- `CALLSIGN_TRUST_CLOUDFLARE=1` to keep Cloudflare-only source gating in nginx
+- `CALLSIGN_REQUEST_SSL_CERT=0` to skip Let's Encrypt request and force self-signed cert
 
-2. Tunnel plane (`server/tunnel`)
-- Authenticated WebSocket endpoint
-- Packet transport (echo / tun)
-- Control-plane-backed bearer validation
+Default behavior:
 
-3. Client plane (`client/windows`)
-- Bootstrap and heartbeat loops
-- Tunnel connection lifecycle
-- Adapter abstraction (mock / Wintun)
+- Interactive shell: installer asks for domain and whether to enable Cloudflare geo gate (default is `No`)
+- Interactive shell: installer asks whether to request Let's Encrypt SSL cert (default is `Yes`)
+- Non-interactive shell: Cloudflare geo gate is disabled unless `CALLSIGN_TRUST_CLOUDFLARE=1` is explicitly set
+- Non-interactive shell: Let's Encrypt request is enabled unless `CALLSIGN_REQUEST_SSL_CERT=0` is explicitly set
 
-Detailed design: [docs/architecture.md](docs/architecture.md)
+## Client Downloads
 
-## Quick Start
+- Windows ARM64: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)
+- Windows x64: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x64.zip)
+- Windows x86: [Click to Download](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x86.zip)
 
-### 1) Environment
+Notes:
+- ARM64 link is current target.
+- Other builds can be published later with the same link pattern.
+
+## Quick Local Run
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-
-### 2) Minimal config
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Set at least:
-
-```text
-CALLSIGN_ACCESS_TOKEN=<strong-random-token>
-```
-
-### 3) Start services
-
-Control:
-
-```powershell
 ./scripts/start-control.ps1
-```
-
-Tunnel:
-
-```powershell
 ./scripts/start-tunnel.ps1
-```
-
-Client:
-
-```powershell
 ./scripts/start-client.ps1 -ControlUrl https://overlay.example.com
 ```
 
-For local plaintext testing only:
+## Docs
 
-```powershell
-./scripts/start-client.ps1 -ControlUrl http://127.0.0.1:5000 -TunnelUrl ws://127.0.0.1:8443/connect-ws -AllowInsecure
-```
-
-## Build
-
-```powershell
-./scripts/build-exe.ps1
-```
-
-Output:
-
-- `dist/callsign/callsign.exe`
-- `dist/callsign-windows-arm64.zip`
-
-This is an onedir package. Distribute the zip or full folder, not a single exe.
-
-## Configuration
-
-Core variables:
-
-- `CALLSIGN_ACCESS_TOKEN`: direct token value
-- `CALLSIGN_ACCESS_TOKEN_FILE`: token file path (default `/etc/callsign/access_token`)
-- `CALLSIGN_TUNNEL_PATH`: WebSocket path (must match control/tunnel/proxy)
-
-Control-plane variables:
-
-- `CALLSIGN_SESSION_TTL` (default `3600`)
-- `CALLSIGN_TUNNEL_PUBLIC_URL`
-
-Tunnel-plane variables:
-
-- `CONTROL_VALIDATE_URL` (default `http://127.0.0.1:5000/api/v1/validate`)
-- `CALLSIGN_TUN_MODE` (`echo` or `tun`)
-- `CALLSIGN_TUN_INTERFACE` (default `tun0`)
-- `CALLSIGN_TUN_LOCAL_CIDR` (default `10.99.0.1/24`)
-
-## Server Deployment Notes
-
-- Baseline proxy config: `deploy/nginx.conf.example`
-- NAT persistence assets:
-  - `deploy/systemd/callsign-nat.service`
-  - `deploy/systemd/callsign-nat-setup.sh`
-
-Recommended token initialization on Linux:
-
-```bash
-sudo install -d -m 700 /etc/callsign
-sudo sh -c 'umask 077; [ -s /etc/callsign/access_token ] || python3 - <<"PY" > /etc/callsign/access_token
-import secrets
-print(secrets.token_urlsafe(32))
-PY'
-sudo chmod 600 /etc/callsign/access_token
-```
-
-Set in `/etc/proxy-server.env`:
-
-```bash
-CALLSIGN_ACCESS_TOKEN_FILE=/etc/callsign/access_token
-```
-
-## Testing
-
-Run full regression set:
-
-```powershell
-.\.venv\Scripts\python.exe scripts/server_auth_surface_smoke.py
-.\.venv\Scripts\python.exe scripts/gui_full_regression_test.py
-.\.venv\Scripts\python.exe scripts/gui_startup_elevation_test.py
-.\.venv\Scripts\python.exe scripts/gui_single_instance_smoke.py
-.\.venv\Scripts\python.exe scripts/gui_tray_smoke_test.py
-.\.venv\Scripts\python.exe scripts/gui_tray_runtime_smoke.py
-```
-
-## Security Checklist (Before Git Push)
-
-- Keep real tokens out of git history
-- Keep `.env`, `.env.*`, and `deploy/proxy-server.env` local only
-- Keep `client_profiles.json`, `*.log`, and `*.ppk` out of version control
-- Rotate any credential once it appeared in shell history, logs, or screenshots
-
-## Repository Layout
-
-- `server/control`: control service
-- `server/tunnel`: tunnel service
-- `client/windows`: Windows GUI and agent
-- `scripts`: build, run, deploy, and test scripts
-- `deploy`: nginx and systemd deployment assets
-- `third_party/wintun`: Wintun binaries and license
-
-## Project Status
-
-Callsign is a prototype focused on behavior validation and incremental hardening.
-
-Not yet in scope:
-
-- Production-grade policy engine
-- End-to-end mTLS identity
-- Full observability and SRE operations stack
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Nginx example: [deploy/nginx.conf.example](deploy/nginx.conf.example)
+- Systemd units: [deploy/systemd](deploy/systemd)
+- Server installer: [deploy/install-server.sh](deploy/install-server.sh)
