@@ -301,9 +301,11 @@ for _ in 1 2 3 4 5; do
   sleep 1
 done
 if [[ -f /etc/callsign/initial_admin_credentials.txt ]]; then
-  echo "[callsign] initial admin credentials:"
+  echo "[callsign] admin console URL: https://${DOMAIN}/login"
+  echo "[callsign] initial admin credentials (change required on first login):"
   sed -n '1p' /etc/callsign/initial_admin_credentials.txt
 else
+  echo "[callsign] admin console URL: https://${DOMAIN}/login"
   echo "[callsign][WARN] initial admin credentials file not found: /etc/callsign/initial_admin_credentials.txt"
 fi
 

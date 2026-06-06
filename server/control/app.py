@@ -923,8 +923,8 @@ async function createUser() {
   const data = await resp.json();
   if (!resp.ok || !data.ok) { alert(data.error || 'create failed'); return; }
   const u = data.user || {};
-  alert('User created.\n\nUsername: ' + u.username + '\nPassword: ' + (u.password || '(set)') +
-        '\nToken: ' + u.token + '\n\nShare these now. The password is shown only once.');
+  alert('User created.\\n\\nUsername: ' + u.username + '\\nPassword: ' + (u.password || '(set)') +
+        '\\nToken: ' + u.token + '\\n\\nShare these now. The password is shown only once.');
   document.getElementById('newU').value = '';
   document.getElementById('newPw').value = '';
   document.getElementById('newT').value = '';
