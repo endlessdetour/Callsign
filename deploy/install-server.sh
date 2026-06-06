@@ -265,9 +265,18 @@ systemctl restart proxy-control.service
 systemctl restart proxy-tunnel.service
 
 TOKEN_VALUE="$(cat "${TOKEN_FILE}")"
+HEALTH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "X-Access-Token: ${TOKEN_VALUE}" http://127.0.0.1:5000/healthz || true)"
 echo "[callsign] install complete"
 echo "[callsign] domain: ${DOMAIN}"
 echo "[callsign] tls cert: ${TLS_CERT_PATH}"
 echo "[callsign] token file: ${TOKEN_FILE}"
 echo "[callsign] token: ${TOKEN_VALUE}"
-echo "[callsign] health: $(curl -s -o /dev/null -w '%{http_code}' -H "X-Access-Token: ${TOKEN_VALUE}" http://127.0.0.1:5000/healthz)"
+echo "[callsign] health: ${HEALTH_CODE}"
+
+if [[ "${HEALTH_CODE}" == "200" ]]; then
+  echo "[callsign][IMPORTANT] control health check passed (200)."
+else
+  echo "[callsign][IMPORTANT][WARN] control health check failed (expected 200, got ${HEALTH_CODE})."
+  echo "[callsign][IMPORTANT][WARN] Run: systemctl status proxy-control proxy-tunnel nginx callsign-nat --no-pager"
+  echo "[callsign][IMPORTANT][WARN] Run: journalctl -u proxy-control -u proxy-tunnel -n 80 --no-pager"
+fi
