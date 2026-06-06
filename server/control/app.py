@@ -122,6 +122,113 @@ def _parse_expiry_to_epoch(raw_value: str, permanent: bool) -> Optional[int]:
     return int(dt.timestamp())
 
 
+def _read_cpu_times():
+    """Return (idle, total) jiffies from /proc/stat, or None if unavailable."""
+    try:
+        with open("/proc/stat", "r", encoding="utf-8") as f:
+            for raw in f:
+                if raw.startswith("cpu "):
+                    parts = [int(x) for x in raw.split()[1:]]
+                    idle = parts[3] + (parts[4] if len(parts) > 4 else 0)
+                    return idle, sum(parts)
+    except (OSError, ValueError):
+        return None
+    return None
+
+
+def _cpu_percent():
+    first = _read_cpu_times()
+    if first is None:
+        return None
+    time.sleep(0.12)
+    second = _read_cpu_times()
+    if second is None:
+        return None
+    idle_delta = second[0] - first[0]
+    total_delta = second[1] - first[1]
+    if total_delta <= 0:
+        return None
+    return round((1.0 - idle_delta / total_delta) * 100.0, 1)
+
+
+def _meminfo():
+    info = {}
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as f:
+            for raw in f:
+                key, _, rest = raw.partition(":")
+                info[key.strip()] = int(rest.strip().split()[0]) * 1024  # kB -> bytes
+    except (OSError, ValueError, IndexError):
+        return None
+    total = info.get("MemTotal")
+    available = info.get("MemAvailable")
+    if total is None or available is None or total <= 0:
+        return None
+    used = total - available
+    mem = {
+        "total": total,
+        "available": available,
+        "used": used,
+        "percent": round(used / total * 100.0, 1),
+    }
+    swap_total = info.get("SwapTotal", 0)
+    swap_free = info.get("SwapFree", 0)
+    if swap_total > 0:
+        swap_used = swap_total - swap_free
+        mem["swap_total"] = swap_total
+        mem["swap_used"] = swap_used
+        mem["swap_percent"] = round(swap_used / swap_total * 100.0, 1)
+    return mem
+
+
+def _disk_usage(path: str = "/"):
+    try:
+        st = os.statvfs(path)
+    except (OSError, AttributeError):
+        return None
+    total = st.f_blocks * st.f_frsize
+    free = st.f_bavail * st.f_frsize
+    if total <= 0:
+        return None
+    used = total - (st.f_bfree * st.f_frsize)
+    return {
+        "total": total,
+        "used": used,
+        "free": free,
+        "percent": round(used / total * 100.0, 1),
+    }
+
+
+def _uptime_seconds():
+    try:
+        with open("/proc/uptime", "r", encoding="utf-8") as f:
+            return int(float(f.read().split()[0]))
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _collect_system_metrics() -> dict:
+    cpu_count = os.cpu_count() or 1
+    load = None
+    try:
+        load = [round(x, 2) for x in os.getloadavg()]
+    except (OSError, AttributeError):
+        load = None
+
+    metrics = {
+        "now": int(time.time()),
+        "cpu_count": cpu_count,
+        "cpu_percent": _cpu_percent(),
+        "load": load,
+        "memory": _meminfo(),
+        "disk": _disk_usage("/"),
+        "uptime_seconds": _uptime_seconds(),
+    }
+    if load is not None and cpu_count:
+        metrics["load_per_core"] = round(load[0] / cpu_count, 2)
+    return metrics
+
+
 def _is_client_api(path: str) -> bool:
     return path.startswith("/api/v1/") and not path.startswith("/api/v1/manage/")
 
@@ -393,6 +500,18 @@ def admin_list_users():
     return jsonify({"ok": True, "users": AUTH_STORE.list_users()})
 
 
+@app.get("/api/v1/manage/system")
+def admin_system_status():
+    _user, err = _require_admin()
+    if err is not None:
+        return err
+    try:
+        metrics = _collect_system_metrics()
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"metrics unavailable: {exc}"}), 500
+    return jsonify({"ok": True, "system": metrics})
+
+
 @app.post("/api/v1/manage/users")
 def admin_create_user():
     _user, err = _require_admin()
@@ -593,6 +712,21 @@ def _render_admin_page():
     .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
     .dot.up { background: var(--ok); box-shadow: 0 0 0 3px rgba(22,163,74,.18); }
     .dot.down { background: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.18); }
+    .sys-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 12px; }
+    .sys-head h3 { margin: 0; font-size: 16px; }
+    .sys-meta { font-size: 12px; color: var(--muted); }
+    .sys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .metric { background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+    .metric-top { display: flex; align-items: baseline; justify-content: space-between; }
+    .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; }
+    .metric-val { font-size: 22px; font-weight: 700; }
+    .metric-val small { font-size: 12px; font-weight: 500; color: var(--muted); }
+    .metric-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 10px; }
+    .bar > span { display: block; height: 100%; border-radius: 999px; transition: width .4s ease; }
+    .bar > span.ok { background: linear-gradient(90deg,#22c55e,#16a34a); }
+    .bar > span.warn { background: linear-gradient(90deg,#f59e0b,#d97706); }
+    .bar > span.crit { background: linear-gradient(90deg,#ef4444,#dc2626); }
     .self-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
     .self-item { display: flex; flex-direction: column; gap: 6px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
     .self-item.self-token { grid-column: 1 / -1; }
@@ -673,6 +807,12 @@ def _render_admin_page():
       </div>
 
       <div id='sysStatus' class='sysbar'></div>
+
+      <div class='sys-head'>
+        <h3>System health</h3>
+        <span id='sysMeta' class='sys-meta'></span>
+      </div>
+      <div id='sysMetrics' class='sys-grid'></div>
 
       <div class='grid'>
         <div>
@@ -783,6 +923,7 @@ function logout() {
   adminToken = "";
   currentUser = {username: "", is_admin: false, must_change: false};
   document.getElementById('p').value = "";
+  stopSystemPolling();
   showView('loginView');
   setStatus('', true);
 }
@@ -800,6 +941,7 @@ function routeAfterAuth() {
     document.getElementById('who').textContent = 'Signed in as ' + currentUser.username + ' (admin)';
     showView('panelView');
     loadUsers();
+    startSystemPolling();
   } else {
     showView('selfView');
     loadMe();
@@ -900,6 +1042,112 @@ function renderStatus(users) {
     "<div class='stat'>Total users <b>" + total + "</b></div>" +
     "<div class='stat'>Active <b>" + active + "</b></div>" +
     "<div class='stat'>Admins <b>" + admins + "</b></div>";
+}
+
+function fmtBytes(n) {
+  if (n === null || n === undefined) return '\u2014';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (v >= 100 || i === 0 ? Math.round(v) : v.toFixed(1)) + ' ' + units[i];
+}
+
+function fmtUptime(s) {
+  if (s === null || s === undefined) return '\u2014';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+  if (h > 0) return h + 'h ' + m + 'm';
+  return m + 'm';
+}
+
+function barClass(pct) {
+  if (pct === null || pct === undefined) return 'ok';
+  if (pct >= 90) return 'crit';
+  if (pct >= 75) return 'warn';
+  return 'ok';
+}
+
+function metricCard(label, valueHtml, pct, subHtml) {
+  let bar = '';
+  if (pct !== null && pct !== undefined) {
+    const w = Math.max(0, Math.min(100, pct));
+    bar = "<div class='bar'><span class='" + barClass(pct) + "' style='width:" + w + "%'></span></div>";
+  }
+  return "<div class='metric'>" +
+    "<div class='metric-top'><span class='metric-label'>" + label + "</span></div>" +
+    "<div class='metric-val'>" + valueHtml + "</div>" +
+    bar +
+    (subHtml ? "<div class='metric-sub'>" + subHtml + "</div>" : '') +
+    "</div>";
+}
+
+function renderSystem(sys) {
+  const cards = [];
+
+  const cpu = sys.cpu_percent;
+  const cpuVal = (cpu === null || cpu === undefined) ? '\u2014' : cpu + "<small>%</small>";
+  cards.push(metricCard('CPU', cpuVal, cpu, sys.cpu_count + ' vCPU'));
+
+  if (sys.memory) {
+    const m = sys.memory;
+    let memSub = fmtBytes(m.used) + ' / ' + fmtBytes(m.total);
+    if (m.swap_total) { memSub += ' &middot; swap ' + m.swap_percent + '%'; }
+    cards.push(metricCard('Memory', m.percent + "<small>%</small>", m.percent, memSub));
+  } else {
+    cards.push(metricCard('Memory', '\u2014', null, 'unavailable'));
+  }
+
+  if (sys.disk) {
+    const d = sys.disk;
+    cards.push(metricCard('Disk (/)', d.percent + "<small>%</small>", d.percent,
+      fmtBytes(d.used) + ' used &middot; ' + fmtBytes(d.free) + ' free'));
+  } else {
+    cards.push(metricCard('Disk (/)', '\u2014', null, 'unavailable'));
+  }
+
+  if (sys.load) {
+    const loadPct = (sys.load_per_core !== null && sys.load_per_core !== undefined)
+      ? Math.round(sys.load_per_core * 100) : null;
+    const perCore = (sys.load_per_core !== null && sys.load_per_core !== undefined) ? sys.load_per_core : '\u2014';
+    cards.push(metricCard('Load avg',
+      sys.load[0] + "<small> / " + sys.load[1] + ' / ' + sys.load[2] + "</small>",
+      loadPct, 'per core ' + perCore));
+  }
+
+  cards.push(metricCard('Uptime', "<span style='font-size:18px'>" + fmtUptime(sys.uptime_seconds) + "</span>", null, ''));
+
+  document.getElementById('sysMetrics').innerHTML = cards.join('');
+  const t = new Date((sys.now || Date.now() / 1000) * 1000);
+  document.getElementById('sysMeta').textContent = 'Updated ' + t.toLocaleTimeString();
+}
+
+async function loadSystem() {
+  if (!adminToken) return;
+  try {
+    const resp = await fetch('/api/v1/manage/system', {headers: authHeaders()});
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      if (resp.status === 401) { logout(); return; }
+      document.getElementById('sysMeta').textContent = 'metrics unavailable';
+      return;
+    }
+    renderSystem(data.system);
+  } catch (e) {
+    document.getElementById('sysMeta').textContent = 'metrics unavailable';
+  }
+}
+
+let sysTimer = null;
+function startSystemPolling() {
+  loadSystem();
+  if (sysTimer) clearInterval(sysTimer);
+  sysTimer = setInterval(loadSystem, 5000);
+}
+function stopSystemPolling() {
+  if (sysTimer) { clearInterval(sysTimer); sysTimer = null; }
 }
 
 async function loadUsers() {
