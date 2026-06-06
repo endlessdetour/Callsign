@@ -272,11 +272,19 @@ echo "[callsign] tls cert: ${TLS_CERT_PATH}"
 echo "[callsign] token file: ${TOKEN_FILE}"
 echo "[callsign] token: ${TOKEN_VALUE}"
 echo "[callsign] health: ${HEALTH_CODE}"
+echo ""
+echo "==================== CALLSIGN INSTALL SUMMARY ===================="
+echo "[callsign] domain: ${DOMAIN}"
+echo "[callsign] token file: ${TOKEN_FILE}"
+echo "[callsign] control health: ${HEALTH_CODE}"
 
 if [[ "${HEALTH_CODE}" == "200" ]]; then
-  echo "[callsign][IMPORTANT] control health check passed (200)."
+  echo "[callsign][PASS] control health check passed (200)."
 else
-  echo "[callsign][IMPORTANT][WARN] control health check failed (expected 200, got ${HEALTH_CODE})."
-  echo "[callsign][IMPORTANT][WARN] Run: systemctl status proxy-control proxy-tunnel nginx callsign-nat --no-pager"
-  echo "[callsign][IMPORTANT][WARN] Run: journalctl -u proxy-control -u proxy-tunnel -n 80 --no-pager"
+  echo "!!!!!!!!!!!!!!!!!!!!! INSTALL ATTENTION REQUIRED !!!!!!!!!!!!!!!!!!!!!"
+  echo "[callsign][FAIL] control health expected 200 but got ${HEALTH_CODE}."
+  echo "[callsign][NEXT] systemctl status proxy-control proxy-tunnel nginx callsign-nat --no-pager"
+  echo "[callsign][NEXT] journalctl -u proxy-control -u proxy-tunnel -n 80 --no-pager"
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 fi
+echo "====================================================================="
