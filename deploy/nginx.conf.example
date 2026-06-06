@@ -36,6 +36,13 @@ server {
         proxy_set_header X-Forwarded-Proto https;
     }
 
+    location = /login {
+        proxy_pass http://control_plane/login;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
     # Do not expose health endpoints publicly by default.
     # If you need external health checks, add strict source allowlists and token checks.
 

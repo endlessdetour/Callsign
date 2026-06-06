@@ -379,8 +379,7 @@ def admin_delete_user(username: str):
     return jsonify({"ok": True})
 
 
-@app.get("/admin")
-def admin_page():
+def _render_admin_page():
     html = """
 <!doctype html>
 <html>
@@ -484,6 +483,16 @@ async function delUser(name) {
 </html>
 """
     return Response(html, mimetype="text/html")
+
+
+@app.get("/admin")
+def admin_page():
+    return _render_admin_page()
+
+
+@app.get("/login")
+def login_page():
+    return _render_admin_page()
 
 
 if __name__ == "__main__":
