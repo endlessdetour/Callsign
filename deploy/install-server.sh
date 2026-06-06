@@ -25,15 +25,15 @@ prompt_tty() {
   local prompt="$1"
   local default_value="${2:-}"
   local answer=""
-  if [[ ! -r /dev/tty ]]; then
+  if [[ ! -e /dev/tty ]]; then
     return 1
   fi
   if [[ -n "${default_value}" ]]; then
-    printf "%s [%s]: " "${prompt}" "${default_value}" > /dev/tty
+    printf "%s [%s]: " "${prompt}" "${default_value}" > /dev/tty 2>/dev/null || return 1
   else
-    printf "%s: " "${prompt}" > /dev/tty
+    printf "%s: " "${prompt}" > /dev/tty 2>/dev/null || return 1
   fi
-  IFS= read -r answer < /dev/tty || true
+  IFS= read -r answer < /dev/tty 2>/dev/null || return 1
   if [[ -z "${answer}" ]]; then
     answer="${default_value}"
   fi
@@ -56,7 +56,7 @@ fi
 echo "[callsign] domain: ${DOMAIN}"
 
 if [[ -z "${TRUST_CLOUDFLARE}" ]]; then
-  if [[ -r /dev/tty ]]; then
+  if [[ -t 2 || -t 1 || -t 0 || -e /dev/tty ]]; then
     cf_answer="$(prompt_tty "[callsign] enable Cloudflare geo gate? (y/N)" "N")" || true
     case "${cf_answer}" in
       [Yy]|[Yy][Ee][Ss]) TRUST_CLOUDFLARE=1 ;;
@@ -87,7 +87,7 @@ TLS_KEY_PATH="${CALLSIGN_TLS_KEY:-/etc/letsencrypt/live/${DOMAIN}/privkey.pem}"
 
 if [[ ! -s "${TLS_CERT_PATH}" || ! -s "${TLS_KEY_PATH}" ]]; then
   echo "[callsign] TLS cert not found for ${DOMAIN}, requesting Let's Encrypt cert..."
-  if [[ -z "${LE_EMAIL}" && -r /dev/tty ]]; then
+  if [[ -z "${LE_EMAIL}" && ( -t 2 || -t 1 || -t 0 || -e /dev/tty ) ]]; then
     LE_EMAIL="$(prompt_tty "[callsign] Let's Encrypt email (optional)" "")" || true
   fi
 
