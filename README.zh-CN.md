@@ -16,11 +16,14 @@ wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/i
 
 - `CALLSIGN_BRANCH=fast_iteration` 安装指定分支
 - `CALLSIGN_TRUST_CLOUDFLARE=1` 保留 nginx 的 Cloudflare 来源限制
+- `CALLSIGN_REQUEST_SSL_CERT=0` 跳过 Let's Encrypt 申请并强制使用自签证书
 
 默认行为：
 
 - 交互式执行：安装器会询问域名，以及是否启用 Cloudflare-geo 限制（默认 `No`）
+- 交互式执行：安装器会询问是否申请 Let's Encrypt SSL 证书（默认 `Yes`）
 - 非交互执行：默认不启用 Cloudflare-geo，只有显式传入 `CALLSIGN_TRUST_CLOUDFLARE=1` 才启用
+- 非交互执行：默认申请 Let's Encrypt，只有显式传入 `CALLSIGN_REQUEST_SSL_CERT=0` 才跳过申请
 
 ## 客户端下载
 

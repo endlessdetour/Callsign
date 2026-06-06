@@ -12,6 +12,7 @@ BRANCH="${CALLSIGN_BRANCH:-main}"
 DOMAIN="${CALLSIGN_DOMAIN:-}"
 TRUST_CLOUDFLARE="${CALLSIGN_TRUST_CLOUDFLARE:-}"
 LE_EMAIL="${CALLSIGN_LE_EMAIL:-}"
+REQUEST_SSL_CERT="${CALLSIGN_REQUEST_SSL_CERT:-}"
 ENV_FILE="/etc/proxy-server.env"
 TOKEN_FILE="/etc/callsign/access_token"
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/proxy-server.conf"
@@ -41,7 +42,7 @@ prompt_tty() {
 }
 
 if [[ -z "${DOMAIN}" ]]; then
-  prompted_domain="$(prompt_tty "[callsign] domain (example: cloud.example.com)" "")" || true
+  prompted_domain="$(prompt_tty "[callsign] domain (example: cloud.example.com)" "" 2>/dev/null)" || true
   if [[ -n "${prompted_domain}" ]]; then
     DOMAIN="${prompted_domain}"
   fi
@@ -56,15 +57,11 @@ fi
 echo "[callsign] domain: ${DOMAIN}"
 
 if [[ -z "${TRUST_CLOUDFLARE}" ]]; then
-  if [[ -t 2 || -t 1 || -t 0 || -e /dev/tty ]]; then
-    cf_answer="$(prompt_tty "[callsign] enable Cloudflare geo gate? (y/N)" "N")" || true
-    case "${cf_answer}" in
-      [Yy]|[Yy][Ee][Ss]) TRUST_CLOUDFLARE=1 ;;
-      *) TRUST_CLOUDFLARE=0 ;;
-    esac
-  else
-    TRUST_CLOUDFLARE=0
-  fi
+  cf_answer="$(prompt_tty "[callsign] enable Cloudflare geo gate? (y/N)" "N" 2>/dev/null)" || cf_answer="N"
+  case "${cf_answer}" in
+    [Yy]|[Yy][Ee][Ss]) TRUST_CLOUDFLARE=1 ;;
+    *) TRUST_CLOUDFLARE=0 ;;
+  esac
 fi
 
 if [[ "${TRUST_CLOUDFLARE}" != "0" && "${TRUST_CLOUDFLARE}" != "1" ]]; then
@@ -78,6 +75,25 @@ else
   echo "[callsign] cloudflare gate: disabled"
 fi
 
+if [[ -z "${REQUEST_SSL_CERT}" ]]; then
+  ssl_answer="$(prompt_tty "[callsign] request Let's Encrypt SSL certificate? (Y/n)" "Y" 2>/dev/null)" || ssl_answer="Y"
+  case "${ssl_answer}" in
+    [Nn]|[Nn][Oo]) REQUEST_SSL_CERT=0 ;;
+    *) REQUEST_SSL_CERT=1 ;;
+  esac
+fi
+
+if [[ "${REQUEST_SSL_CERT}" != "0" && "${REQUEST_SSL_CERT}" != "1" ]]; then
+  echo "[callsign] CALLSIGN_REQUEST_SSL_CERT must be 0 or 1." >&2
+  exit 1
+fi
+
+if [[ "${REQUEST_SSL_CERT}" == "1" ]]; then
+  echo "[callsign] ssl certificate request: enabled"
+else
+  echo "[callsign] ssl certificate request: disabled"
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y git python3 python3-venv python3-pip iptables nginx openssl certbot
@@ -86,26 +102,39 @@ TLS_CERT_PATH="${CALLSIGN_TLS_CERT:-/etc/letsencrypt/live/${DOMAIN}/fullchain.pe
 TLS_KEY_PATH="${CALLSIGN_TLS_KEY:-/etc/letsencrypt/live/${DOMAIN}/privkey.pem}"
 
 if [[ ! -s "${TLS_CERT_PATH}" || ! -s "${TLS_KEY_PATH}" ]]; then
-  echo "[callsign] TLS cert not found for ${DOMAIN}, requesting Let's Encrypt cert..."
-  if [[ -z "${LE_EMAIL}" && ( -t 2 || -t 1 || -t 0 || -e /dev/tty ) ]]; then
-    LE_EMAIL="$(prompt_tty "[callsign] Let's Encrypt email (optional)" "")" || true
-  fi
+  if [[ "${REQUEST_SSL_CERT}" == "1" ]]; then
+    echo "[callsign] TLS cert not found for ${DOMAIN}, requesting Let's Encrypt cert..."
+    if [[ -z "${LE_EMAIL}" ]]; then
+      LE_EMAIL="$(prompt_tty "[callsign] Let's Encrypt email (optional)" "" 2>/dev/null)" || true
+    fi
 
-  systemctl stop nginx >/dev/null 2>&1 || true
-  certbot_args=(certonly --standalone --non-interactive --agree-tos --keep-until-expiring -d "${DOMAIN}")
-  if [[ -n "${LE_EMAIL}" ]]; then
-    certbot_args+=(--email "${LE_EMAIL}")
-  else
-    certbot_args+=(--register-unsafely-without-email)
-  fi
+    systemctl stop nginx >/dev/null 2>&1 || true
+    certbot_args=(certonly --standalone --non-interactive --agree-tos --keep-until-expiring -d "${DOMAIN}")
+    if [[ -n "${LE_EMAIL}" ]]; then
+      certbot_args+=(--email "${LE_EMAIL}")
+    else
+      certbot_args+=(--register-unsafely-without-email)
+    fi
 
-  if certbot "${certbot_args[@]}"; then
-    systemctl enable --now certbot.timer >/dev/null 2>&1 || true
-    TLS_CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
-    TLS_KEY_PATH="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
-    echo "[callsign] Let's Encrypt certificate issued successfully."
+    if certbot "${certbot_args[@]}"; then
+      systemctl enable --now certbot.timer >/dev/null 2>&1 || true
+      TLS_CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+      TLS_KEY_PATH="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
+      echo "[callsign] Let's Encrypt certificate issued successfully."
+    else
+      echo "[callsign] Let's Encrypt issuance failed, falling back to self-signed certificate."
+      install -d -m 700 /etc/nginx/certs
+      TLS_CERT_PATH="/etc/nginx/certs/${DOMAIN}.crt"
+      TLS_KEY_PATH="/etc/nginx/certs/${DOMAIN}.key"
+      openssl req -x509 -nodes -newkey rsa:2048 \
+        -keyout "${TLS_KEY_PATH}" \
+        -out "${TLS_CERT_PATH}" \
+        -days 365 \
+        -subj "/CN=${DOMAIN}" >/dev/null 2>&1
+      chmod 600 "${TLS_KEY_PATH}"
+    fi
   else
-    echo "[callsign] Let's Encrypt issuance failed, falling back to self-signed certificate."
+    echo "[callsign] SSL certificate request disabled, generating self-signed certificate."
     install -d -m 700 /etc/nginx/certs
     TLS_CERT_PATH="/etc/nginx/certs/${DOMAIN}.crt"
     TLS_KEY_PATH="/etc/nginx/certs/${DOMAIN}.key"

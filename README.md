@@ -16,11 +16,14 @@ Optional flags:
 
 - `CALLSIGN_BRANCH=fast_iteration` to install a specific branch
 - `CALLSIGN_TRUST_CLOUDFLARE=1` to keep Cloudflare-only source gating in nginx
+- `CALLSIGN_REQUEST_SSL_CERT=0` to skip Let's Encrypt request and force self-signed cert
 
 Default behavior:
 
 - Interactive shell: installer asks for domain and whether to enable Cloudflare geo gate (default is `No`)
+- Interactive shell: installer asks whether to request Let's Encrypt SSL cert (default is `Yes`)
 - Non-interactive shell: Cloudflare geo gate is disabled unless `CALLSIGN_TRUST_CLOUDFLARE=1` is explicitly set
+- Non-interactive shell: Let's Encrypt request is enabled unless `CALLSIGN_REQUEST_SSL_CERT=0` is explicitly set
 
 ## Client Downloads
 
