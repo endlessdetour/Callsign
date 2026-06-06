@@ -7,7 +7,7 @@ Callsign is a lightweight overlay networking prototype.
 ## Server Install (One Command)
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
+wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash
 ```
 
 This installs/updates server components, asks/uses your domain, automatically requests a Let's Encrypt certificate (falls back to self-signed only if issuance fails), enables certificate auto-renewal, renders nginx config, creates token, writes systemd units, and starts services.

@@ -55,6 +55,12 @@ if [[ -z "${DOMAIN}" ]]; then
   exit 1
 fi
 
+if [[ "${DOMAIN}" == "example.com" || "${DOMAIN}" == "cloud.example.com" || "${DOMAIN}" == *.example.com ]]; then
+  echo "[callsign] Example domain is not allowed: ${DOMAIN}" >&2
+  echo "[callsign] Please provide your real domain (for example: cloud.yourdomain.com)." >&2
+  exit 1
+fi
+
 echo "[callsign] domain: ${DOMAIN}"
 
 if [[ -z "${TRUST_CLOUDFLARE}" ]]; then
