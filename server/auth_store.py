@@ -12,6 +12,9 @@ from typing import Any, Optional
 
 DEFAULT_DB_PATH = os.getenv("CALLSIGN_DB_PATH", "/etc/callsign/callsign.db")
 
+# Sentinel used to distinguish "field not provided" from an explicit None value.
+_UNSET = object()
+
 
 @dataclass
 class UserRecord:
@@ -467,20 +470,20 @@ class AuthStore:
             "updated_at": now,
         }
 
-    def update_user(self, username: str, expires_at: Optional[int], token: Optional[str], is_active: Optional[bool]) -> None:
+    def update_user(self, username: str, expires_at: Any = _UNSET, token: Any = _UNSET, is_active: Any = _UNSET) -> None:
         now = int(time.time())
         updates: list[str] = ["updated_at = ?"]
         params: list[Any] = [now]
 
-        if expires_at is not None or expires_at is None:
+        if expires_at is not _UNSET:
             updates.append("expires_at = ?")
             params.append(expires_at)
 
-        if token is not None:
+        if token is not _UNSET and token is not None:
             updates.append("token = ?")
-            params.append(token.strip() or secrets.token_urlsafe(32))
+            params.append(str(token).strip() or secrets.token_urlsafe(32))
 
-        if is_active is not None:
+        if is_active is not _UNSET and is_active is not None:
             updates.append("is_active = ?")
             params.append(1 if is_active else 0)
 

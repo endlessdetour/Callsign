@@ -424,17 +424,26 @@ def admin_update_user(username: str):
         return err
 
     payload = request.get_json(silent=True) or {}
-    token = payload.get("token")
-    token_value = None if token is None else str(token).strip()
-    is_active = payload.get("is_active")
-    if is_active is not None:
-        is_active = bool(is_active)
+    kwargs = {}
 
-    permanent = bool(payload.get("permanent", False))
-    expires_raw = str(payload.get("expires_at", "")).strip()
+    if "token" in payload:
+        token = payload.get("token")
+        kwargs["token"] = None if token is None else str(token).strip()
+
+    if "is_active" in payload:
+        is_active = payload.get("is_active")
+        kwargs["is_active"] = None if is_active is None else bool(is_active)
+
+    if "expires_at" in payload or "permanent" in payload:
+        permanent = bool(payload.get("permanent", False))
+        expires_raw = str(payload.get("expires_at", "")).strip()
+        try:
+            kwargs["expires_at"] = _parse_expiry_to_epoch(expires_raw, permanent=permanent)
+        except ValueError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+
     try:
-        expires_at = _parse_expiry_to_epoch(expires_raw, permanent=permanent)
-        AUTH_STORE.update_user(username=username, expires_at=expires_at, token=token_value, is_active=is_active)
+        AUTH_STORE.update_user(username=username, **kwargs)
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
@@ -527,6 +536,8 @@ def _render_admin_page():
     .btn-ghost:hover { background: #e0e7ff; }
     .btn-danger { background: var(--danger); padding: 7px 12px; font-size: 13px; }
     .btn-danger:hover { background: var(--danger-hover); }
+    .btn-sm { padding: 6px 10px; font-size: 12px; }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .hint { font-size: 13px; min-height: 18px; margin-top: 12px; }
     .hint.ok { color: var(--ok); }
     .hint.err { color: var(--danger); }
@@ -891,7 +902,17 @@ async function loadUsers() {
     const active = u.is_active ? "<span class='pill yes'>active</span>" : "<span class='pill no'>inactive</span>";
     const admin = u.is_admin ? "<span class='pill muted'>admin</span>" : '';
     const perm = u.permanent ? "<span class='pill yes'>yes</span>" : "<span class='pill no'>no</span>";
-    const del = u.is_admin ? '' : "<button class='btn btn-danger' data-del='" + esc(u.username) + "'>Delete</button>";
+    let actions = '';
+    if (!u.is_admin) {
+      const un = esc(u.username);
+      const toggleLabel = u.is_active ? 'Disable' : 'Enable';
+      actions =
+        "<div class='actions'>" +
+        "<button class='btn btn-ghost btn-sm' data-exp='" + un + "'>Set expiry</button>" +
+        "<button class='btn btn-ghost btn-sm' data-toggle='" + un + "' data-active='" + (u.is_active ? '1' : '0') + "'>" + toggleLabel + "</button>" +
+        "<button class='btn btn-danger btn-sm' data-del='" + un + "'>Delete</button>" +
+        "</div>";
+    }
     tr.innerHTML =
       "<td>" + esc(u.username) + "</td>" +
       "<td><div class='token-cell'><span class='token-text mono' title='" + esc(u.token) + "'>" + esc(u.token) + "</span>" +
@@ -900,7 +921,7 @@ async function loadUsers() {
       "<td>" + perm + "</td>" +
       "<td>" + active + "</td>" +
       "<td>" + admin + "</td>" +
-      "<td>" + del + "</td>";
+      "<td>" + actions + "</td>";
     tbody.appendChild(tr);
   }
 }
@@ -944,9 +965,44 @@ async function delUser(name) {
   loadUsers();
 }
 
+async function patchUser(name, payload) {
+  const resp = await fetch('/api/v1/manage/users/' + encodeURIComponent(name), {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json();
+  if (!resp.ok || !data.ok) { alert(data.error || 'update failed'); return false; }
+  loadUsers();
+  return true;
+}
+
+async function setExpiry(name) {
+  if (!adminToken) return;
+  const input = prompt('Set expiry for ' + name + '\\nEnter a date (YYYY-MM-DD), or leave blank for permanent:', '');
+  if (input === null) return;
+  const value = input.trim();
+  if (value && !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+    alert('Please use the format YYYY-MM-DD, or leave blank for permanent.');
+    return;
+  }
+  await patchUser(name, value ? {permanent: false, expires_at: value} : {permanent: true, expires_at: ''});
+}
+
+async function toggleActive(name, isActive) {
+  if (!adminToken) return;
+  const next = !isActive;
+  if (!confirm((next ? 'Enable' : 'Disable') + ' user ' + name + '?')) return;
+  await patchUser(name, {is_active: next});
+}
+
 document.getElementById('tbody').addEventListener('click', e => {
   const d = e.target.getAttribute('data-del');
   if (d) { delUser(d); return; }
+  const ex = e.target.getAttribute('data-exp');
+  if (ex) { setExpiry(ex); return; }
+  const tg = e.target.getAttribute('data-toggle');
+  if (tg) { toggleActive(tg, e.target.getAttribute('data-active') === '1'); return; }
   const c = e.target.getAttribute('data-copy');
   if (c) { copyToken(c); }
 });
