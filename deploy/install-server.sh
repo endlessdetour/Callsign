@@ -49,8 +49,9 @@ if [[ -z "${DOMAIN}" ]]; then
 fi
 
 if [[ -z "${DOMAIN}" ]]; then
-  echo "[callsign] CALLSIGN_DOMAIN is required (example: cloud.example.com)." >&2
-  echo "[callsign] Usage: wget -qO- <url> | sudo CALLSIGN_DOMAIN=cloud.example.com bash" >&2
+  echo "[callsign] CALLSIGN_DOMAIN is required." >&2
+  echo "[callsign] Example value only: cloud.example.com" >&2
+  echo "[callsign] Usage: wget -qO- <url> | sudo CALLSIGN_DOMAIN=<your-domain> bash" >&2
   exit 1
 fi
 
