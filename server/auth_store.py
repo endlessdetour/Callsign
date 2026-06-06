@@ -236,6 +236,37 @@ class AuthStore:
                     raise ValueError("user not found")
                 conn.commit()
 
+    def admin_reset_password(self, username: str, new_password: str = "") -> dict[str, Any]:
+        """Admin-initiated password reset for a regular user.
+
+        Sets a new password (generated when not supplied), forces the user to
+        change it on next login, and revokes their existing sessions.
+        Returns the plaintext password so it can be shared once.
+        """
+        safe_username = username.strip()
+        plain_password = new_password.strip() or secrets.token_urlsafe(9)
+        if len(plain_password) < 8:
+            raise ValueError("password must be at least 8 characters")
+
+        now = int(time.time())
+        with self._lock:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT id, is_admin FROM users WHERE username = ?", (safe_username,)
+                ).fetchone()
+                if row is None:
+                    raise ValueError("user not found")
+                if int(row["is_admin"]) == 1:
+                    raise ValueError("cannot reset an admin password here")
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, must_change_credentials = 1, updated_at = ? WHERE id = ?",
+                    (_hash_password(plain_password), now, row["id"]),
+                )
+                conn.execute("DELETE FROM admin_sessions WHERE user_id = ?", (row["id"],))
+                conn.commit()
+
+        return {"username": safe_username, "password": plain_password}
+
     def get_user_by_id(self, user_id: int) -> Optional[dict[str, Any]]:
         with self._lock:
             with self._connect() as conn:

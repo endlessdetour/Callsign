@@ -452,6 +452,24 @@ def admin_update_user(username: str):
     return jsonify({"ok": True})
 
 
+@app.post("/api/v1/manage/users/<username>/password")
+def admin_reset_user_password(username: str):
+    _user, err = _require_admin()
+    if err is not None:
+        return err
+
+    payload = request.get_json(silent=True) or {}
+    new_password = str(payload.get("password", "")).strip()
+    try:
+        result = AUTH_STORE.admin_reset_password(username, new_password)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"reset failed: {exc}"}), 400
+
+    return jsonify({"ok": True, "user": result})
+
+
 @app.delete("/api/v1/manage/users/<username>")
 def admin_delete_user(username: str):
     _user, err = _require_admin()
@@ -909,6 +927,7 @@ async function loadUsers() {
       actions =
         "<div class='actions'>" +
         "<button class='btn btn-ghost btn-sm' data-exp='" + un + "'>Set expiry</button>" +
+        "<button class='btn btn-ghost btn-sm' data-reset='" + un + "'>Reset password</button>" +
         "<button class='btn btn-ghost btn-sm' data-toggle='" + un + "' data-active='" + (u.is_active ? '1' : '0') + "'>" + toggleLabel + "</button>" +
         "<button class='btn btn-danger btn-sm' data-del='" + un + "'>Delete</button>" +
         "</div>";
@@ -996,6 +1015,24 @@ async function toggleActive(name, isActive) {
   await patchUser(name, {is_active: next});
 }
 
+async function resetPassword(name) {
+  if (!adminToken) return;
+  const input = prompt('Reset password for ' + name + '\\nEnter a new password (min 8 chars), or leave blank to auto-generate:', '');
+  if (input === null) return;
+  const value = input.trim();
+  if (value && value.length < 8) { alert('Password must be at least 8 characters.'); return; }
+  const resp = await fetch('/api/v1/manage/users/' + encodeURIComponent(name) + '/password', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({password: value})
+  });
+  const data = await resp.json();
+  if (!resp.ok || !data.ok) { alert(data.error || 'reset failed'); return; }
+  const u = data.user || {};
+  alert('Password reset.\\n\\nUsername: ' + u.username + '\\nNew password: ' + u.password +
+        '\\n\\nShare this now. The user must change it at next login. The password is shown only once.');
+}
+
 document.getElementById('tbody').addEventListener('click', e => {
   const d = e.target.getAttribute('data-del');
   if (d) { delUser(d); return; }
@@ -1003,6 +1040,8 @@ document.getElementById('tbody').addEventListener('click', e => {
   if (ex) { setExpiry(ex); return; }
   const tg = e.target.getAttribute('data-toggle');
   if (tg) { toggleActive(tg, e.target.getAttribute('data-active') === '1'); return; }
+  const rs = e.target.getAttribute('data-reset');
+  if (rs) { resetPassword(rs); return; }
   const c = e.target.getAttribute('data-copy');
   if (c) { copyToken(c); }
 });
