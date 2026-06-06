@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import hmac
 import ipaddress
 import json
 import os
@@ -27,35 +26,18 @@ def _env(*names: str, default: str = "") -> str:
     return default
 
 
-def _load_access_token() -> str:
-    token = _env("CALLSIGN_ACCESS_TOKEN")
-    if token:
-        return token
-
-    token_file = _env("CALLSIGN_ACCESS_TOKEN_FILE", default="/etc/callsign/access_token")
-    try:
-        with open(token_file, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except OSError:
-        return ""
-
-
 CONTROL_VALIDATE_URL = os.getenv("CONTROL_VALIDATE_URL", "http://127.0.0.1:5000/api/v1/validate")
-ACCESS_TOKEN = _load_access_token()
 TUNNEL_HOST = os.getenv("TUNNEL_HOST", "0.0.0.0")
 TUNNEL_PORT = int(os.getenv("TUNNEL_PORT", "8443"))
 CALLSIGN_TUNNEL_PATH = _env("CALLSIGN_TUNNEL_PATH", default="/tunnel") or "/tunnel"
 CALLSIGN_TUN_MODE = _env("CALLSIGN_TUN_MODE", default="echo").lower()
 TUN_INTERFACE = _env("CALLSIGN_TUN_INTERFACE", default="tun0")
 TUN_LOCAL_CIDR = _env("CALLSIGN_TUN_LOCAL_CIDR", default="10.99.0.1/24")
+REVALIDATE_INTERVAL_SECONDS = int(_env("CALLSIGN_REVALIDATE_INTERVAL_SECONDS", default="30"))
 
 TUNSETIFF = 0x400454CA
 IFF_TUN = 0x0001
 IFF_NO_PI = 0x1000
-
-if not ACCESS_TOKEN:
-    raise RuntimeError("CALLSIGN_ACCESS_TOKEN is required")
-
 
 class LinuxTunDevice:
     def __init__(self, if_name: str):
@@ -113,8 +95,10 @@ class TunnelHub:
         self.mode = CALLSIGN_TUN_MODE
         self.tun: Optional[LinuxTunDevice] = None
         self.client_by_ip: Dict[str, websockets.WebSocketServerProtocol] = {}
+        self.client_auth_by_ip: Dict[str, Tuple[str, str]] = {}
         self.lock = asyncio.Lock()
         self.tun_reader_task = None
+        self.revalidate_task = None
 
     async def initialize(self):
         if self.mode != "tun":
@@ -127,10 +111,12 @@ class TunnelHub:
             self._configure_tun_interface()
             print(f"[tunnel] running in tun mode on {TUN_INTERFACE}; ensure routes/NAT configured externally")
             self.tun_reader_task = asyncio.create_task(self._tun_to_clients_loop())
+            self.revalidate_task = asyncio.create_task(self._revalidate_clients_loop())
         except Exception as exc:
             print(f"[tunnel] tun mode unavailable ({exc}); falling back to echo mode")
             self.mode = "echo"
             self.tun = None
+            self.revalidate_task = asyncio.create_task(self._revalidate_clients_loop())
 
     def _configure_tun_interface(self):
         # Ensure tun interface is up and has the expected gateway address.
@@ -143,16 +129,22 @@ class TunnelHub:
             self.tun_reader_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self.tun_reader_task
+        if self.revalidate_task is not None:
+            self.revalidate_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self.revalidate_task
         if self.tun is not None:
             self.tun.close()
 
-    async def register(self, assigned_ip: str, websocket):
+    async def register(self, assigned_ip: str, websocket, session_token: str, access_token: str):
         async with self.lock:
             self.client_by_ip[assigned_ip] = websocket
+            self.client_auth_by_ip[assigned_ip] = (session_token, access_token)
 
     async def unregister(self, assigned_ip: str):
         async with self.lock:
             self.client_by_ip.pop(assigned_ip, None)
+            self.client_auth_by_ip.pop(assigned_ip, None)
 
     async def on_client_frame(self, assigned_ip: str, websocket, msg: bytes):
         if self.mode == "echo":
@@ -179,14 +171,34 @@ class TunnelHub:
             except Exception:
                 continue
 
+    async def _revalidate_clients_loop(self):
+        while True:
+            await asyncio.sleep(REVALIDATE_INTERVAL_SECONDS)
+            async with self.lock:
+                snapshot = [
+                    (ip, ws, self.client_auth_by_ip.get(ip))
+                    for ip, ws in self.client_by_ip.items()
+                ]
+
+            for assigned_ip, ws, auth_info in snapshot:
+                if auth_info is None:
+                    continue
+                session_token, access_token = auth_info
+                is_valid = await asyncio.to_thread(_validate_token_sync, session_token, access_token)
+                if is_valid:
+                    continue
+                with contextlib.suppress(Exception):
+                    await ws.close(code=1008, reason="session expired")
+                await self.unregister(assigned_ip)
+
 
 HUB = TunnelHub()
 
 
-def _validate_token_sync(token: str) -> Optional[Tuple[str, str]]:
+def _validate_token_sync(token: str, access_token: str) -> Optional[Tuple[str, str]]:
     headers = {
         "Authorization": f"Bearer {token}",
-        "X-Access-Token": ACCESS_TOKEN,
+        "X-Access-Token": access_token,
     }
     try:
         resp = requests.post(CONTROL_VALIDATE_URL, headers=headers, timeout=5)
@@ -207,8 +219,8 @@ def _validate_token_sync(token: str) -> Optional[Tuple[str, str]]:
     return str(device_id), str(assigned_ip)
 
 async def process_request(path, request_headers):
-    access_token = request_headers.get("X-Access-Token", "")
-    if not hmac.compare_digest(access_token, ACCESS_TOKEN):
+    access_token = request_headers.get("X-Access-Token", "").strip()
+    if not access_token:
         return (HTTPStatus.UNAUTHORIZED, [("Content-Type", "text/plain"), ("Content-Length", "0")], b"")
 
     if path == "/healthz":
@@ -230,15 +242,15 @@ async def process_request(path, request_headers):
         return (HTTPStatus.UNAUTHORIZED, [("Content-Type", "text/plain"), ("Content-Length", "0")], b"")
 
     token = auth.split(" ", 1)[1].strip()
-    auth_info = await asyncio.to_thread(_validate_token_sync, token)
+    auth_info = await asyncio.to_thread(_validate_token_sync, token, access_token)
     if not auth_info:
         return (HTTPStatus.UNAUTHORIZED, [("Content-Type", "text/plain"), ("Content-Length", "0")], b"")
     return None
 
 
 async def tunnel_ws(websocket, path):
-    access_token = websocket.request_headers.get("X-Access-Token", "")
-    if not hmac.compare_digest(access_token, ACCESS_TOKEN):
+    access_token = websocket.request_headers.get("X-Access-Token", "").strip()
+    if not access_token:
         await websocket.close(code=1008, reason="unauthorized")
         return
 
@@ -248,13 +260,13 @@ async def tunnel_ws(websocket, path):
 
     auth = websocket.request_headers.get("Authorization", "")
     token = auth.split(" ", 1)[1].strip() if auth.startswith("Bearer ") else ""
-    auth_info = await asyncio.to_thread(_validate_token_sync, token)
+    auth_info = await asyncio.to_thread(_validate_token_sync, token, access_token)
     if not auth_info:
         await websocket.close(code=1008, reason="unauthorized")
         return
     device_id, assigned_ip = auth_info
 
-    await HUB.register(assigned_ip, websocket)
+    await HUB.register(assigned_ip, websocket, token, access_token)
 
     frame_count = 0
     try:
