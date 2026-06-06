@@ -18,6 +18,7 @@ TOKEN_FILE="/etc/callsign/access_token"
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/proxy-server.conf"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/proxy-server.conf"
 ORIGIN_GATE_CONF="/etc/nginx/conf.d/callsign-origin-gate.conf"
+CF_GEO_CONF="/etc/nginx/conf.d/cloudflare-geo.conf"
 
 echo "[callsign] install dir: ${INSTALL_DIR}"
 echo "[callsign] repo: ${REPO_URL} (${BRANCH})"
@@ -154,23 +155,6 @@ if [[ ! -s "${TLS_CERT_PATH}" || ! -s "${TLS_KEY_PATH}" ]]; then
   fi
 fi
 
-if [[ "${TRUST_CLOUDFLARE}" == "1" && ! -f /etc/nginx/conf.d/cloudflare-geo.conf ]]; then
-  echo "[callsign] cloudflare-geo.conf not found; disabling Cloudflare-only gate."
-  TRUST_CLOUDFLARE=0
-fi
-
-# Ensure $from_cloudflare is always defined to avoid nginx startup failures.
-# In non-Cloudflare mode we set it to 1 for all traffic (no source gating).
-if [[ "${TRUST_CLOUDFLARE}" == "1" ]]; then
-  rm -f "${ORIGIN_GATE_CONF}"
-else
-  cat > "${ORIGIN_GATE_CONF}" <<'EOF'
-map $remote_addr $from_cloudflare {
-    default 1;
-}
-EOF
-fi
-
 upsert_env() {
   local key="$1"
   local value="$2"
@@ -199,6 +183,30 @@ fi
 python3 -m venv "${INSTALL_DIR}/.venv"
 "${INSTALL_DIR}/.venv/bin/python" -m pip install --upgrade pip
 "${INSTALL_DIR}/.venv/bin/python" -m pip install -r "${INSTALL_DIR}/requirements.txt"
+
+if [[ "${TRUST_CLOUDFLARE}" == "1" ]]; then
+  if [[ ! -f "${CF_GEO_CONF}" ]]; then
+    if [[ -f "${INSTALL_DIR}/deploy/nginx.cloudflare-geo.conf.example" ]]; then
+      install -D -m 644 "${INSTALL_DIR}/deploy/nginx.cloudflare-geo.conf.example" "${CF_GEO_CONF}"
+      echo "[callsign] installed Cloudflare geo config: ${CF_GEO_CONF}"
+    else
+      echo "[callsign] cloudflare geo example not found; disabling Cloudflare-only gate."
+      TRUST_CLOUDFLARE=0
+    fi
+  fi
+fi
+
+# Ensure $from_cloudflare is always defined to avoid nginx startup failures.
+# In non-Cloudflare mode we set it to 1 for all traffic (no source gating).
+if [[ "${TRUST_CLOUDFLARE}" == "1" ]]; then
+  rm -f "${ORIGIN_GATE_CONF}"
+else
+  cat > "${ORIGIN_GATE_CONF}" <<'EOF'
+map $remote_addr $from_cloudflare {
+    default 1;
+}
+EOF
+fi
 
 install -d -m 700 /etc/callsign
 if [[ ! -s "${TOKEN_FILE}" ]]; then
