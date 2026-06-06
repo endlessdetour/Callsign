@@ -11,6 +11,7 @@ REPO_URL="${CALLSIGN_REPO_URL:-https://github.com/endlessdetour/Callsign.git}"
 BRANCH="${CALLSIGN_BRANCH:-main}"
 DOMAIN="${CALLSIGN_DOMAIN:-}"
 TRUST_CLOUDFLARE="${CALLSIGN_TRUST_CLOUDFLARE:-}"
+LE_EMAIL="${CALLSIGN_LE_EMAIL:-}"
 ENV_FILE="/etc/proxy-server.env"
 TOKEN_FILE="/etc/callsign/access_token"
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/proxy-server.conf"
@@ -20,9 +21,29 @@ ORIGIN_GATE_CONF="/etc/nginx/conf.d/callsign-origin-gate.conf"
 echo "[callsign] install dir: ${INSTALL_DIR}"
 echo "[callsign] repo: ${REPO_URL} (${BRANCH})"
 
+prompt_tty() {
+  local prompt="$1"
+  local default_value="${2:-}"
+  local answer=""
+  if [[ ! -r /dev/tty ]]; then
+    return 1
+  fi
+  if [[ -n "${default_value}" ]]; then
+    printf "%s [%s]: " "${prompt}" "${default_value}" > /dev/tty
+  else
+    printf "%s: " "${prompt}" > /dev/tty
+  fi
+  IFS= read -r answer < /dev/tty || true
+  if [[ -z "${answer}" ]]; then
+    answer="${default_value}"
+  fi
+  printf '%s' "${answer}"
+}
+
 if [[ -z "${DOMAIN}" ]]; then
-  if [[ -t 0 ]]; then
-    read -r -p "[callsign] domain (example: cloud.example.com): " DOMAIN
+  prompted_domain="$(prompt_tty "[callsign] domain (example: cloud.example.com)" "")" || true
+  if [[ -n "${prompted_domain}" ]]; then
+    DOMAIN="${prompted_domain}"
   fi
 fi
 
@@ -35,8 +56,8 @@ fi
 echo "[callsign] domain: ${DOMAIN}"
 
 if [[ -z "${TRUST_CLOUDFLARE}" ]]; then
-  if [[ -t 0 ]]; then
-    read -r -p "[callsign] enable Cloudflare geo gate? [y/N]: " cf_answer
+  if [[ -r /dev/tty ]]; then
+    cf_answer="$(prompt_tty "[callsign] enable Cloudflare geo gate? (y/N)" "N")" || true
     case "${cf_answer}" in
       [Yy]|[Yy][Ee][Ss]) TRUST_CLOUDFLARE=1 ;;
       *) TRUST_CLOUDFLARE=0 ;;
@@ -59,22 +80,42 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y git python3 python3-venv python3-pip iptables nginx openssl
+apt-get install -y git python3 python3-venv python3-pip iptables nginx openssl certbot
 
 TLS_CERT_PATH="${CALLSIGN_TLS_CERT:-/etc/letsencrypt/live/${DOMAIN}/fullchain.pem}"
 TLS_KEY_PATH="${CALLSIGN_TLS_KEY:-/etc/letsencrypt/live/${DOMAIN}/privkey.pem}"
 
 if [[ ! -s "${TLS_CERT_PATH}" || ! -s "${TLS_KEY_PATH}" ]]; then
-  echo "[callsign] TLS cert not found for ${DOMAIN}, generating self-signed cert."
-  install -d -m 700 /etc/nginx/certs
-  TLS_CERT_PATH="/etc/nginx/certs/${DOMAIN}.crt"
-  TLS_KEY_PATH="/etc/nginx/certs/${DOMAIN}.key"
-  openssl req -x509 -nodes -newkey rsa:2048 \
-    -keyout "${TLS_KEY_PATH}" \
-    -out "${TLS_CERT_PATH}" \
-    -days 365 \
-    -subj "/CN=${DOMAIN}" >/dev/null 2>&1
-  chmod 600 "${TLS_KEY_PATH}"
+  echo "[callsign] TLS cert not found for ${DOMAIN}, requesting Let's Encrypt cert..."
+  if [[ -z "${LE_EMAIL}" && -r /dev/tty ]]; then
+    LE_EMAIL="$(prompt_tty "[callsign] Let's Encrypt email (optional)" "")" || true
+  fi
+
+  systemctl stop nginx >/dev/null 2>&1 || true
+  certbot_args=(certonly --standalone --non-interactive --agree-tos --keep-until-expiring -d "${DOMAIN}")
+  if [[ -n "${LE_EMAIL}" ]]; then
+    certbot_args+=(--email "${LE_EMAIL}")
+  else
+    certbot_args+=(--register-unsafely-without-email)
+  fi
+
+  if certbot "${certbot_args[@]}"; then
+    systemctl enable --now certbot.timer >/dev/null 2>&1 || true
+    TLS_CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+    TLS_KEY_PATH="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
+    echo "[callsign] Let's Encrypt certificate issued successfully."
+  else
+    echo "[callsign] Let's Encrypt issuance failed, falling back to self-signed certificate."
+    install -d -m 700 /etc/nginx/certs
+    TLS_CERT_PATH="/etc/nginx/certs/${DOMAIN}.crt"
+    TLS_KEY_PATH="/etc/nginx/certs/${DOMAIN}.key"
+    openssl req -x509 -nodes -newkey rsa:2048 \
+      -keyout "${TLS_KEY_PATH}" \
+      -out "${TLS_CERT_PATH}" \
+      -days 365 \
+      -subj "/CN=${DOMAIN}" >/dev/null 2>&1
+    chmod 600 "${TLS_KEY_PATH}"
+  fi
 fi
 
 if [[ "${TRUST_CLOUDFLARE}" == "1" && ! -f /etc/nginx/conf.d/cloudflare-geo.conf ]]; then

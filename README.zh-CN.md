@@ -10,7 +10,7 @@ Callsign 是一个轻量级 Overlay 网络原型。
 wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
 ```
 
-这条命令会自动完成：拉取/更新代码、读取/输入域名、写入域名到 nginx 配置、生成 token、写入 systemd、启动服务。
+这条命令会自动完成：拉取/更新代码、读取/输入域名、自动申请 Let's Encrypt 证书（失败才回退自签）、启用证书自动续期、写入域名到 nginx 配置、生成 token、写入 systemd、启动服务。
 
 可选参数：
 
@@ -19,7 +19,7 @@ wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/i
 
 默认行为：
 
-- 交互式执行：安装器会询问是否启用 Cloudflare-geo 限制（默认 `No`）
+- 交互式执行：安装器会询问域名，以及是否启用 Cloudflare-geo 限制（默认 `No`）
 - 非交互执行：默认不启用 Cloudflare-geo，只有显式传入 `CALLSIGN_TRUST_CLOUDFLARE=1` 才启用
 
 ## 客户端下载

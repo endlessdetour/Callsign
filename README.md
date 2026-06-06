@@ -10,7 +10,7 @@ Callsign is a lightweight overlay networking prototype.
 wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
 ```
 
-This installs/updates server components, asks/uses your domain, renders nginx config with that domain, creates token, writes systemd units, and starts services.
+This installs/updates server components, asks/uses your domain, automatically requests a Let's Encrypt certificate (falls back to self-signed only if issuance fails), enables certificate auto-renewal, renders nginx config, creates token, writes systemd units, and starts services.
 
 Optional flags:
 
@@ -19,7 +19,7 @@ Optional flags:
 
 Default behavior:
 
-- Interactive shell: installer asks whether to enable Cloudflare geo gate (default is `No`)
+- Interactive shell: installer asks for domain and whether to enable Cloudflare geo gate (default is `No`)
 - Non-interactive shell: Cloudflare geo gate is disabled unless `CALLSIGN_TRUST_CLOUDFLARE=1` is explicitly set
 
 ## Client Downloads
