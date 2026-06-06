@@ -48,6 +48,11 @@ server {
         proxy_set_header Host $host;
         proxy_read_timeout 3600;
     }
+
+    # Everything else is closed (prevents the default nginx welcome page / info leak).
+    location / {
+        return 444;
+    }
 }
 
 server {

@@ -258,6 +258,11 @@ PY
 ln -sfn "${NGINX_SITE_AVAILABLE}" "${NGINX_SITE_ENABLED}"
 rm -f /etc/nginx/sites-enabled/default
 
+# Hide nginx version in Server header and error pages.
+cat > /etc/nginx/conf.d/callsign-hardening.conf <<'EOF'
+server_tokens off;
+EOF
+
 install -m 644 "${INSTALL_DIR}/deploy/systemd/callsign-nat.service" /etc/systemd/system/callsign-nat.service
 install -m 755 "${INSTALL_DIR}/deploy/systemd/callsign-nat-setup.sh" /usr/local/bin/callsign-nat-setup.sh
 install -m 644 "${INSTALL_DIR}/deploy/systemd/proxy-control.service" /etc/systemd/system/proxy-control.service
