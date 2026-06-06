@@ -385,33 +385,168 @@ def _render_admin_page():
 <html>
 <head>
   <meta charset=\"utf-8\" />
-  <title>Callsign User Admin</title>
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>Callsign Console</title>
   <style>
-    body { font-family: Segoe UI, sans-serif; margin: 24px; max-width: 1100px; }
-    input, button { padding: 8px; margin: 4px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .row { margin: 8px 0; }
-    .mono { font-family: Consolas, monospace; font-size: 12px; }
+    :root {
+      --bg: #0f172a;
+      --card: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --ok: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 10% -10%, #312e81 0%, transparent 50%),
+                  radial-gradient(1000px 500px at 110% 10%, #0ea5e9 0%, transparent 45%),
+                  var(--bg);
+      padding: 40px 20px;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    .brand { display: flex; align-items: center; gap: 12px; color: #e2e8f0; margin-bottom: 24px; }
+    .brand .logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
+      display: grid; place-items: center; font-weight: 700; color: #fff;
+      box-shadow: 0 8px 24px rgba(79,70,229,.45);
+    }
+    .brand h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+    .brand p { margin: 2px 0 0; font-size: 12px; color: #94a3b8; }
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(2,6,23,.35);
+      border: 1px solid rgba(255,255,255,.6);
+    }
+    .login-card { max-width: 420px; margin: 0 auto; }
+    h2 { margin: 0 0 4px; font-size: 22px; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+    input[type=text], input[type=password], input.inp {
+      width: 100%; padding: 11px 13px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 14px; outline: none; transition: border .15s, box-shadow .15s;
+      background: #f8fafc;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.15); background: #fff; }
+    .btn {
+      border: none; border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: transform .05s, background .15s; color: #fff; background: var(--primary);
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:active { transform: translateY(1px); }
+    .btn-block { width: 100%; }
+    .btn-ghost { background: #eef2ff; color: var(--primary); }
+    .btn-ghost:hover { background: #e0e7ff; }
+    .btn-danger { background: var(--danger); padding: 7px 12px; font-size: 13px; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .hint { font-size: 13px; min-height: 18px; margin-top: 12px; }
+    .hint.ok { color: var(--ok); }
+    .hint.err { color: var(--danger); }
+    .hidden { display: none; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+    .panel-actions { display: flex; align-items: center; gap: 12px; }
+    .who { font-size: 13px; color: var(--muted); }
+    .grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 12px; align-items: end;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 22px;
+    }
+    .check { display: flex; align-items: center; gap: 8px; height: 42px; }
+    .check input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text); }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 12px 14px; color: var(--muted); font-size: 11px; text-transform: uppercase;
+      letter-spacing: .5px; border-bottom: 2px solid var(--border);
+    }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:hover { background: #f8fafc; }
+    .mono { font-family: 'Consolas', ui-monospace, monospace; font-size: 12px; }
+    .token-cell { display: flex; align-items: center; gap: 8px; }
+    .token-text { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+    .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .pill.yes { background: #dcfce7; color: #166534; }
+    .pill.no { background: #fee2e2; color: #991b1b; }
+    .pill.muted { background: #e2e8f0; color: #475569; }
+    .copy { cursor: pointer; border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 4px 8px; font-size: 11px; color: var(--muted); }
+    .copy:hover { color: var(--primary); border-color: var(--primary); }
+    .empty { text-align: center; color: var(--muted); padding: 26px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <h2>Callsign User Admin</h2>
-  <div class=\"row\">Username <input id=\"u\" value=\"admin\" /> Password <input id=\"p\" type=\"password\" /></div>
-  <div class=\"row\"><button onclick=\"login()\">Login</button> <span id=\"status\"></span></div>
+  <div class='wrap'>
+    <div class='brand'>
+      <div class='logo'>C</div>
+      <div>
+        <h1>Callsign</h1>
+        <p>User Management Console</p>
+      </div>
+    </div>
 
-  <h3>Create User</h3>
-  <div class=\"row\">
-    Username <input id=\"newU\" />
-    Token(optional) <input id=\"newT\" class=\"mono\" size=\"48\" />
-    Expire (YYYY-MM-DD or blank) <input id=\"newE\" />
-    Permanent <input id=\"newP\" type=\"checkbox\" checked />
-    <button onclick=\"createUser()\">Create</button>
+    <div id='loginView' class='card login-card'>
+      <h2>Sign in</h2>
+      <p class='sub'>Enter your administrator credentials to continue.</p>
+      <div class='field'>
+        <label for='u'>Username</label>
+        <input id='u' type='text' autocomplete='off' placeholder='Enter username' />
+      </div>
+      <div class='field'>
+        <label for='p'>Password</label>
+        <input id='p' type='password' autocomplete='current-password' placeholder='Enter password' />
+      </div>
+      <button class='btn btn-block' onclick='login()'>Login</button>
+      <div id='status' class='hint'></div>
+    </div>
+
+    <div id='panelView' class='card hidden'>
+      <div class='panel-head'>
+        <h2>Users</h2>
+        <div class='panel-actions'>
+          <span id='who' class='who'></span>
+          <button class='btn btn-ghost' onclick='loadUsers()'>Refresh</button>
+          <button class='btn btn-ghost' onclick='logout()'>Sign out</button>
+        </div>
+      </div>
+
+      <div class='grid'>
+        <div>
+          <label for='newU'>Username</label>
+          <input id='newU' class='inp' placeholder='new user' />
+        </div>
+        <div>
+          <label for='newT'>Token (optional)</label>
+          <input id='newT' class='inp mono' placeholder='auto if blank' />
+        </div>
+        <div>
+          <label for='newE'>Expire (YYYY-MM-DD)</label>
+          <input id='newE' class='inp' placeholder='blank = none' />
+        </div>
+        <div class='check'>
+          <input id='newP' type='checkbox' checked />
+          <label for='newP'>Permanent</label>
+        </div>
+        <button class='btn' onclick='createUser()'>Create</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Username</th><th>Token</th><th>Expires</th><th>Permanent</th><th>Active</th><th>Admin</th><th>Action</th></tr>
+        </thead>
+        <tbody id='tbody'></tbody>
+      </table>
+    </div>
   </div>
-
-  <h3>Users</h3>
-  <button onclick=\"loadUsers()\">Refresh</button>
-  <table id=\"tbl\"><thead><tr><th>username</th><th>token</th><th>expires_at</th><th>permanent</th><th>active</th><th>admin</th><th>action</th></tr></thead><tbody></tbody></table>
 
 <script>
 let adminToken = "";
@@ -420,32 +555,81 @@ function authHeaders() {
   return {"Authorization": "Bearer " + adminToken, "Content-Type": "application/json"};
 }
 
+function setStatus(msg, ok) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'hint ' + (ok ? 'ok' : 'err');
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function showPanel(username) {
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('panelView').classList.remove('hidden');
+  document.getElementById('who').textContent = 'Signed in as ' + username;
+}
+
+function logout() {
+  adminToken = "";
+  document.getElementById('p').value = "";
+  document.getElementById('panelView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+  setStatus('', true);
+}
+
 async function login() {
+  const username = document.getElementById('u').value.trim();
+  const password = document.getElementById('p').value;
+  if (!username || !password) { setStatus('Username and password are required.', false); return; }
+  try {
     const resp = await fetch('/api/v1/manage/login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: document.getElementById('u').value, password: document.getElementById('p').value})
-  });
-  const data = await resp.json();
-  if (!resp.ok || !data.ok) {
-    document.getElementById('status').innerText = 'login failed';
-    return;
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) { setStatus('Login failed. Check your credentials.', false); return; }
+    adminToken = data.admin_session_token;
+    showPanel(data.username || username);
+    loadUsers();
+  } catch (e) {
+    setStatus('Network error, please retry.', false);
   }
-  adminToken = data.admin_session_token;
-  document.getElementById('status').innerText = 'login ok';
-  loadUsers();
+}
+
+function copyToken(t) {
+  if (navigator.clipboard) navigator.clipboard.writeText(t);
 }
 
 async function loadUsers() {
   if (!adminToken) return;
-    const resp = await fetch('/api/v1/manage/users', {headers: authHeaders()});
+  const resp = await fetch('/api/v1/manage/users', {headers: authHeaders()});
   const data = await resp.json();
-  const tbody = document.querySelector('#tbl tbody');
+  const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
-  if (!resp.ok || !data.ok) return;
+  if (!resp.ok || !data.ok) { if (resp.status === 401) logout(); return; }
+  if (!data.users.length) {
+    tbody.innerHTML = "<tr><td colspan='7' class='empty'>No users yet. Create one above.</td></tr>";
+    return;
+  }
   for (const u of data.users) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${u.username}</td><td class=\"mono\">${u.token}</td><td>${u.expires_at ?? ''}</td><td>${u.permanent}</td><td>${u.is_active}</td><td>${u.is_admin}</td><td><button onclick=\"delUser('${u.username}')\">Delete</button></td>`;
+    const exp = u.expires_at ? new Date(u.expires_at * 1000).toISOString().slice(0, 10) : '\u2014';
+    const active = u.is_active ? "<span class='pill yes'>active</span>" : "<span class='pill no'>inactive</span>";
+    const admin = u.is_admin ? "<span class='pill muted'>admin</span>" : '';
+    const perm = u.permanent ? "<span class='pill yes'>yes</span>" : "<span class='pill no'>no</span>";
+    const del = u.is_admin ? '' : "<button class='btn btn-danger' data-del='" + esc(u.username) + "'>Delete</button>";
+    tr.innerHTML =
+      "<td>" + esc(u.username) + "</td>" +
+      "<td><div class='token-cell'><span class='token-text mono' title='" + esc(u.token) + "'>" + esc(u.token) + "</span>" +
+      "<button class='copy' data-copy='" + esc(u.token) + "'>copy</button></div></td>" +
+      "<td>" + exp + "</td>" +
+      "<td>" + perm + "</td>" +
+      "<td>" + active + "</td>" +
+      "<td>" + admin + "</td>" +
+      "<td>" + del + "</td>";
     tbody.appendChild(tr);
   }
 }
@@ -453,31 +637,47 @@ async function loadUsers() {
 async function createUser() {
   if (!adminToken) return;
   const payload = {
-    username: document.getElementById('newU').value,
-    token: document.getElementById('newT').value,
-    expires_at: document.getElementById('newE').value,
+    username: document.getElementById('newU').value.trim(),
+    token: document.getElementById('newT').value.trim(),
+    expires_at: document.getElementById('newE').value.trim(),
     permanent: document.getElementById('newP').checked,
   };
-    const resp = await fetch('/api/v1/manage/users', {
+  if (!payload.username) { alert('Username is required.'); return; }
+  const resp = await fetch('/api/v1/manage/users', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload)
   });
   const data = await resp.json();
-  if (!resp.ok || !data.ok) alert(data.error || 'create failed');
+  if (!resp.ok || !data.ok) { alert(data.error || 'create failed'); return; }
+  document.getElementById('newU').value = '';
+  document.getElementById('newT').value = '';
+  document.getElementById('newE').value = '';
   loadUsers();
 }
 
 async function delUser(name) {
   if (!adminToken) return;
-    const resp = await fetch('/api/v1/manage/users/' + encodeURIComponent(name), {
+  if (!confirm('Delete user ' + name + '?')) return;
+  const resp = await fetch('/api/v1/manage/users/' + encodeURIComponent(name), {
     method: 'DELETE',
     headers: authHeaders(),
   });
   const data = await resp.json();
-  if (!resp.ok || !data.ok) alert(data.error || 'delete failed');
+  if (!resp.ok || !data.ok) { alert(data.error || 'delete failed'); return; }
   loadUsers();
 }
+
+document.getElementById('tbody').addEventListener('click', e => {
+  const d = e.target.getAttribute('data-del');
+  if (d) { delUser(d); return; }
+  const c = e.target.getAttribute('data-copy');
+  if (c) { copyToken(c); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.getElementById('loginView').classList.contains('hidden')) login();
+});
 </script>
 </body>
 </html>
