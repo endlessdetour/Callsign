@@ -287,6 +287,12 @@ echo "------------------------------------------------"
 echo "[callsign] domain: ${DOMAIN}"
 echo "[callsign] token file: ${TOKEN_FILE}"
 echo "[callsign] control health: ${HEALTH_CODE}"
+if [[ -f /etc/callsign/initial_admin_credentials.txt ]]; then
+  echo "[callsign] initial admin credentials:"
+  sed -n '1p' /etc/callsign/initial_admin_credentials.txt
+else
+  echo "[callsign][WARN] initial admin credentials file not found: /etc/callsign/initial_admin_credentials.txt"
+fi
 
 if [[ "${HEALTH_CODE}" == "200" ]]; then
   echo "[callsign][PASS] control health check passed (200)."

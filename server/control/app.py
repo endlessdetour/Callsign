@@ -1,15 +1,21 @@
 import hashlib
 import hmac
 import os
+import sys
 import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, Optional
 
 from flask import Flask, Response, g, jsonify, request
 
-from server.auth_store import AuthStore
+SERVER_ROOT = Path(__file__).resolve().parents[1]
+if str(SERVER_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVER_ROOT))
+
+from auth_store import AuthStore
 
 
 app = Flask(__name__)
