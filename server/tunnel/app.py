@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hmac
 import ipaddress
 import json
 import os
@@ -29,6 +30,7 @@ def _env(*names: str, default: str = "") -> str:
 CONTROL_VALIDATE_URL = os.getenv("CONTROL_VALIDATE_URL", "http://127.0.0.1:5000/api/v1/validate")
 TUNNEL_HOST = os.getenv("TUNNEL_HOST", "0.0.0.0")
 TUNNEL_PORT = int(os.getenv("TUNNEL_PORT", "8443"))
+SEED_ACCESS_TOKEN = _env("CALLSIGN_ACCESS_TOKEN")
 CALLSIGN_TUNNEL_PATH = _env("CALLSIGN_TUNNEL_PATH", default="/tunnel") or "/tunnel"
 CALLSIGN_TUN_MODE = _env("CALLSIGN_TUN_MODE", default="echo").lower()
 TUN_INTERFACE = _env("CALLSIGN_TUN_INTERFACE", default="tun0")
@@ -152,6 +154,11 @@ class TunnelHub:
             return
         if self.tun is None:
             return
+        # Anti-spoofing: only forward packets whose source address matches the
+        # IP this client was leased. Drops forged source IPs (and non-IPv4),
+        # preventing a client from impersonating another tenant on the overlay.
+        if extract_ipv4_src(msg) != assigned_ip:
+            return
         await self.tun.write_packet(msg)
 
     async def _tun_to_clients_loop(self):
@@ -224,6 +231,10 @@ async def process_request(path, request_headers):
         return (HTTPStatus.UNAUTHORIZED, [("Content-Type", "text/plain"), ("Content-Length", "0")], b"")
 
     if path == "/healthz":
+        # Health endpoint requires the configured seed access token (operators /
+        # monitoring know it); a non-empty but wrong token must not pass.
+        if SEED_ACCESS_TOKEN and not hmac.compare_digest(access_token, SEED_ACCESS_TOKEN):
+            return (HTTPStatus.UNAUTHORIZED, [("Content-Type", "text/plain"), ("Content-Length", "0")], b"")
         body = b'{"ok": true, "service": "tunnel"}'
         return (
             HTTPStatus.OK,

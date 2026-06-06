@@ -66,9 +66,20 @@ class AuthStore:
                     )
                     """
                 )
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS ip_leases (
+                        ip TEXT PRIMARY KEY,
+                        device_id TEXT UNIQUE NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )
+                    """
+                )
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_users_token ON users(token)")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_users_exp ON users(expires_at)")
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_ip_leases_device ON ip_leases(device_id)")
 
                 existing_cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
                 if "must_change_credentials" not in existing_cols:
@@ -96,6 +107,44 @@ class AuthStore:
                 )
                 conn.commit()
                 return {"username": username, "password": password, "token": token}
+
+    def assign_ip(self, device_id: str, subnet_prefix: str = "10.99.0", first: int = 2, last: int = 254) -> str:
+        """Allocate a stable overlay IP for a device using a DB-backed lease.
+
+        A device always gets the same IP back (idempotent), and two different
+        devices can never share an IP, eliminating the hash-collision risk of
+        deriving the IP directly from the device id.
+        """
+        safe_device = (device_id or "").strip()
+        if not safe_device:
+            raise ValueError("device_id is required")
+
+        now = int(time.time())
+        with self._lock:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT ip FROM ip_leases WHERE device_id = ? LIMIT 1", (safe_device,)
+                ).fetchone()
+                if row is not None:
+                    conn.execute(
+                        "UPDATE ip_leases SET updated_at = ? WHERE device_id = ?", (now, safe_device)
+                    )
+                    conn.commit()
+                    return str(row["ip"])
+
+                taken = {str(r["ip"]) for r in conn.execute("SELECT ip FROM ip_leases").fetchall()}
+                for octet in range(first, last + 1):
+                    candidate = f"{subnet_prefix}.{octet}"
+                    if candidate in taken:
+                        continue
+                    conn.execute(
+                        "INSERT INTO ip_leases (ip, device_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                        (candidate, safe_device, now, now),
+                    )
+                    conn.commit()
+                    return candidate
+
+        raise ValueError("ip pool exhausted")
 
     def verify_user_token(self, token: str) -> Optional[UserRecord]:
         if not token:

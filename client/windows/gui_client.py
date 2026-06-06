@@ -1,5 +1,6 @@
 import json
 import os
+import base64
 from pathlib import Path
 import queue
 import signal
@@ -12,6 +13,57 @@ import ctypes.wintypes
 import tkinter as tk
 import traceback
 from tkinter import messagebox, simpledialog, ttk
+
+_DPAPI_PREFIX = "DPAPI:"
+
+
+class _DATA_BLOB(ctypes.Structure):
+    _fields_ = [("cbData", ctypes.wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+
+def _dpapi_protect(plaintext: str) -> str:
+    """Encrypt a string with Windows DPAPI (per-user). Returns base64 or '' on failure."""
+    if os.name != "nt" or not plaintext:
+        return ""
+    try:
+        data = plaintext.encode("utf-8")
+        buf_in = ctypes.create_string_buffer(data, len(data))
+        blob_in = _DATA_BLOB(len(data), ctypes.cast(buf_in, ctypes.POINTER(ctypes.c_char)))
+        blob_out = _DATA_BLOB()
+        ok = ctypes.windll.crypt32.CryptProtectData(
+            ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out)
+        )
+        if not ok:
+            return ""
+        try:
+            raw = ctypes.string_at(blob_out.pbData, blob_out.cbData)
+            return base64.b64encode(raw).decode("ascii")
+        finally:
+            ctypes.windll.kernel32.LocalFree(blob_out.pbData)
+    except Exception:
+        return ""
+
+
+def _dpapi_unprotect(b64: str) -> str:
+    """Decrypt a base64 DPAPI blob back to a string. Returns '' on failure."""
+    if os.name != "nt" or not b64:
+        return ""
+    try:
+        raw = base64.b64decode(b64.encode("ascii"))
+        buf_in = ctypes.create_string_buffer(raw, len(raw))
+        blob_in = _DATA_BLOB(len(raw), ctypes.cast(buf_in, ctypes.POINTER(ctypes.c_char)))
+        blob_out = _DATA_BLOB()
+        ok = ctypes.windll.crypt32.CryptUnprotectData(
+            ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out)
+        )
+        if not ok:
+            return ""
+        try:
+            return ctypes.string_at(blob_out.pbData, blob_out.cbData).decode("utf-8")
+        finally:
+            ctypes.windll.kernel32.LocalFree(blob_out.pbData)
+    except Exception:
+        return ""
 
 
 _single_instance_mutex = None
@@ -683,9 +735,12 @@ class ClientGui:
         for name, data in loaded_profiles.items():
             if not isinstance(name, str) or not isinstance(data, dict):
                 continue
+            raw_token = str(data.get("access_token", "")).strip()
+            if raw_token.startswith(_DPAPI_PREFIX):
+                raw_token = _dpapi_unprotect(raw_token[len(_DPAPI_PREFIX):])
             normalized[name] = {
                 "control_url": str(data.get("control_url", "")).strip(),
-                "access_token": str(data.get("access_token", "")).strip(),
+                "access_token": raw_token,
             }
 
         if not normalized:
@@ -700,9 +755,21 @@ class ClientGui:
 
     def _persist_profiles(self):
         self.profile_store_path.parent.mkdir(parents=True, exist_ok=True)
+        # Encrypt the access token at rest with DPAPI so the profile file does
+        # not contain a plaintext bearer credential. Falls back to plaintext
+        # only if DPAPI is unavailable (e.g. non-Windows).
+        serialized: dict[str, dict[str, str]] = {}
+        for name, data in self.profiles.items():
+            token = str(data.get("access_token", ""))
+            enc = _dpapi_protect(token)
+            stored_token = (_DPAPI_PREFIX + enc) if enc else token
+            serialized[name] = {
+                "control_url": str(data.get("control_url", "")),
+                "access_token": stored_token,
+            }
         payload = {
             "last_profile": self.active_profile_name,
-            "profiles": self.profiles,
+            "profiles": serialized,
         }
         self.profile_store_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 

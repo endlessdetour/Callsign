@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import os
+import secrets
 import sys
 import threading
 import time
@@ -56,12 +57,14 @@ if _initial_admin:
     line = (
         f"username={_initial_admin['username']} password={_initial_admin['password']} token={_initial_admin['token']}"
     )
-    print(f"[callsign][admin-init] {line}")
     try:
         os.makedirs(os.path.dirname(INITIAL_ADMIN_FILE), exist_ok=True)
         with open(INITIAL_ADMIN_FILE, "w", encoding="utf-8") as f:
             f.write(line + "\n")
         os.chmod(INITIAL_ADMIN_FILE, 0o600)
+        # Do not print the plaintext password to stdout/journald; only the file
+        # (mode 0600) holds the secret.
+        print(f"[callsign][admin-init] initial admin credentials written to {INITIAL_ADMIN_FILE}")
     except OSError as exc:
         print(f"[callsign][admin-init] failed to write credentials file: {exc}")
 
@@ -79,16 +82,14 @@ class Session:
 SESSIONS: Dict[str, Session] = {}
 SESSIONS_LOCK = threading.Lock()
 
+# Per-process random fallback secret used only when no seed access token is
+# configured. Avoids signing session tokens with a hardcoded, source-visible key.
+_FALLBACK_SIGNING_SECRET = secrets.token_urlsafe(32)
+
 
 def _sign(value: str) -> str:
-    secret = SEED_ACCESS_TOKEN or "callsign-session-secret"
+    secret = SEED_ACCESS_TOKEN or _FALLBACK_SIGNING_SECRET
     return hmac.new(secret.encode("utf-8"), value.encode("utf-8"), hashlib.sha256).hexdigest()
-
-
-def _assigned_ip_for_device(device_id: str) -> str:
-    digest = hashlib.sha256(device_id.encode("utf-8")).digest()
-    suffix = digest[0] % 250 + 2
-    return f"10.99.0.{suffix}"
 
 
 def _deny_444() -> tuple[str, int]:
@@ -373,7 +374,11 @@ def bootstrap():
     if not device_id:
         return _deny_444()
 
-    assigned_ip = _assigned_ip_for_device(device_id)
+    try:
+        assigned_ip = AUTH_STORE.assign_ip(device_id)
+    except ValueError:
+        # No free overlay IP available (pool exhausted) or bad device id.
+        return jsonify({"ok": False, "error": "no address available"}), 503
     owner_token = request.headers.get("X-Access-Token", "").strip()
     owner_username = g.auth_user.username
     session_token = issue_session_token(device_id, assigned_ip, owner_username, owner_token)
@@ -1333,4 +1338,4 @@ def login_page():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=5000, debug=False)
