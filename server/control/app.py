@@ -126,12 +126,12 @@ def _is_client_api(path: str) -> bool:
     return path.startswith("/api/v1/") and not path.startswith("/api/v1/manage/")
 
 
-def _admin_user_from_request():
+def _session_user_from_request():
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None
     session_token = auth.split(" ", 1)[1].strip()
-    return AUTH_STORE.validate_admin_session(session_token)
+    return AUTH_STORE.validate_session(session_token)
 
 
 @app.before_request
@@ -305,47 +305,123 @@ def admin_login():
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", ""))
 
-    user = AUTH_STORE.verify_admin_credentials(username, password)
+    user = AUTH_STORE.verify_credentials(username, password)
     if user is None:
         return jsonify({"ok": False, "error": "invalid credentials"}), 401
 
     session_token = AUTH_STORE.create_admin_session(user.id, ttl_seconds=ADMIN_SESSION_TTL_SECONDS)
-    return jsonify({"ok": True, "admin_session_token": session_token, "username": user.username})
+    return jsonify({
+        "ok": True,
+        "admin_session_token": session_token,
+        "username": user.username,
+        "is_admin": user.is_admin,
+        "must_change": user.must_change,
+    })
+
+
+def _require_admin():
+    """Return (user, None) for an authenticated admin, or (None, response) otherwise."""
+    user = _session_user_from_request()
+    if user is None:
+        return None, (jsonify({"ok": False, "error": "unauthorized"}), 401)
+    if user.must_change:
+        return None, (jsonify({"ok": False, "error": "setup required", "must_change": True}), 403)
+    if not user.is_admin:
+        return None, (jsonify({"ok": False, "error": "forbidden"}), 403)
+    return user, None
+
+
+@app.get("/api/v1/manage/me")
+def manage_me():
+    user = _session_user_from_request()
+    if user is None:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    info = AUTH_STORE.get_user_by_id(user.id)
+    if info is None:
+        return jsonify({"ok": False, "error": "not found"}), 404
+    info["must_change"] = user.must_change
+    return jsonify({"ok": True, "user": info})
+
+
+@app.post("/api/v1/manage/password")
+def manage_change_password():
+    user = _session_user_from_request()
+    if user is None:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    new_password = str(payload.get("new_password", ""))
+    try:
+        AUTH_STORE.change_password(user.id, new_password)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"change failed: {exc}"}), 400
+
+    return jsonify({"ok": True})
+
+
+@app.post("/api/v1/manage/setup")
+def admin_setup():
+    user = _session_user_from_request()
+    if user is None:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    if not user.is_admin:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not user.must_change:
+        return jsonify({"ok": False, "error": "setup already completed"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    new_username = str(payload.get("new_username", "")).strip()
+    new_password = str(payload.get("new_password", ""))
+
+    try:
+        result = AUTH_STORE.complete_admin_setup(user.id, new_username, new_password)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"setup failed: {exc}"}), 400
+
+    return jsonify({"ok": True, "username": result["username"]})
 
 
 @app.get("/api/v1/manage/users")
 def admin_list_users():
-    if _admin_user_from_request() is None:
-        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    _user, err = _require_admin()
+    if err is not None:
+        return err
     return jsonify({"ok": True, "users": AUTH_STORE.list_users()})
 
 
 @app.post("/api/v1/manage/users")
 def admin_create_user():
-    if _admin_user_from_request() is None:
-        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    _user, err = _require_admin()
+    if err is not None:
+        return err
 
     payload = request.get_json(silent=True) or {}
     username = str(payload.get("username", "")).strip()
     token = str(payload.get("token", "")).strip()
+    password = str(payload.get("password", "")).strip()
     permanent = bool(payload.get("permanent", False))
     expires_raw = str(payload.get("expires_at", "")).strip()
 
     try:
         expires_at = _parse_expiry_to_epoch(expires_raw, permanent=permanent)
-        user = AUTH_STORE.create_user(username=username, expires_at=expires_at, token=token)
+        created = AUTH_STORE.create_user(username=username, expires_at=expires_at, token=token, password=password)
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"ok": False, "error": f"create failed: {exc}"}), 400
 
-    return jsonify({"ok": True, "user": user})
+    return jsonify({"ok": True, "user": created})
 
 
 @app.patch("/api/v1/manage/users/<username>")
 def admin_update_user(username: str):
-    if _admin_user_from_request() is None:
-        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    _user, err = _require_admin()
+    if err is not None:
+        return err
 
     payload = request.get_json(silent=True) or {}
     token = payload.get("token")
@@ -369,8 +445,9 @@ def admin_update_user(username: str):
 
 @app.delete("/api/v1/manage/users/<username>")
 def admin_delete_user(username: str):
-    if _admin_user_from_request() is None:
-        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    _user, err = _require_admin()
+    if err is not None:
+        return err
 
     try:
         AUTH_STORE.delete_user(username)
@@ -458,7 +535,7 @@ def _render_admin_page():
     .panel-actions { display: flex; align-items: center; gap: 12px; }
     .who { font-size: 13px; color: var(--muted); }
     .grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap: 12px; align-items: end;
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto auto; gap: 12px; align-items: end;
       background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 22px;
     }
     .check { display: flex; align-items: center; gap: 8px; height: 42px; }
@@ -481,7 +558,20 @@ def _render_admin_page():
     .copy { cursor: pointer; border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 4px 8px; font-size: 11px; color: var(--muted); }
     .copy:hover { color: var(--primary); border-color: var(--primary); }
     .empty { text-align: center; color: var(--muted); padding: 26px; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .sysbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .stat { display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 13px; }
+    .stat b { font-size: 15px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .dot.up { background: var(--ok); box-shadow: 0 0 0 3px rgba(22,163,74,.18); }
+    .dot.down { background: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.18); }
+    .self-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    .self-item { display: flex; flex-direction: column; gap: 6px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .self-item.self-token { grid-column: 1 / -1; }
+    .self-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; }
+    .self-value { font-size: 15px; }
+    .self-h3 { margin: 0 0 14px; font-size: 16px; }
+    .self-pw { max-width: 420px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .self-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -509,6 +599,40 @@ def _render_admin_page():
       <div id='status' class='hint'></div>
     </div>
 
+    <div id='setupView' class='card login-card hidden'>
+      <h2>Secure your account</h2>
+      <p class='sub'>First login detected. Set a new administrator username and password. The default <strong>admin</strong> account will be disabled.</p>
+      <div class='field'>
+        <label for='setU'>New username</label>
+        <input id='setU' type='text' autocomplete='off' placeholder='Choose a username' />
+      </div>
+      <div class='field'>
+        <label for='setP'>New password</label>
+        <input id='setP' type='password' autocomplete='new-password' placeholder='At least 8 characters' />
+      </div>
+      <div class='field'>
+        <label for='setP2'>Confirm password</label>
+        <input id='setP2' type='password' autocomplete='new-password' placeholder='Re-enter password' />
+      </div>
+      <button class='btn btn-block' onclick='completeSetup()'>Save and continue</button>
+      <div id='setupStatus' class='hint'></div>
+    </div>
+
+    <div id='pwChangeView' class='card login-card hidden'>
+      <h2>Change your password</h2>
+      <p class='sub'>For security, please set a new password before continuing.</p>
+      <div class='field'>
+        <label for='pwNew'>New password</label>
+        <input id='pwNew' type='password' autocomplete='new-password' placeholder='At least 8 characters' />
+      </div>
+      <div class='field'>
+        <label for='pwNew2'>Confirm password</label>
+        <input id='pwNew2' type='password' autocomplete='new-password' placeholder='Re-enter password' />
+      </div>
+      <button class='btn btn-block' onclick='changeOwnPassword(true)'>Save and continue</button>
+      <div id='pwChangeStatus' class='hint'></div>
+    </div>
+
     <div id='panelView' class='card hidden'>
       <div class='panel-head'>
         <h2>Users</h2>
@@ -519,10 +643,16 @@ def _render_admin_page():
         </div>
       </div>
 
+      <div id='sysStatus' class='sysbar'></div>
+
       <div class='grid'>
         <div>
           <label for='newU'>Username</label>
           <input id='newU' class='inp' placeholder='new user' />
+        </div>
+        <div>
+          <label for='newPw'>Password</label>
+          <input id='newPw' class='inp' placeholder='auto if blank' />
         </div>
         <div>
           <label for='newT'>Token (optional)</label>
@@ -546,10 +676,48 @@ def _render_admin_page():
         <tbody id='tbody'></tbody>
       </table>
     </div>
+
+    <div id='selfView' class='card hidden'>
+      <div class='panel-head'>
+        <h2>My account</h2>
+        <div class='panel-actions'>
+          <span id='selfWho' class='who'></span>
+          <button class='btn btn-ghost' onclick='logout()'>Sign out</button>
+        </div>
+      </div>
+
+      <div class='self-grid'>
+        <div class='self-item'><span class='self-label'>Username</span><span id='selfUsername' class='self-value'></span></div>
+        <div class='self-item'><span class='self-label'>Status</span><span id='selfStatus' class='self-value'></span></div>
+        <div class='self-item'><span class='self-label'>Expires</span><span id='selfExpires' class='self-value'></span></div>
+        <div class='self-item self-token'>
+          <span class='self-label'>Access token</span>
+          <div class='token-cell'>
+            <span id='selfToken' class='token-text mono'></span>
+            <button class='copy' id='selfCopy'>copy</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 class='self-h3'>Change password</h3>
+      <div class='self-pw'>
+        <div class='field'>
+          <label for='selfPwNew'>New password</label>
+          <input id='selfPwNew' type='password' autocomplete='new-password' placeholder='At least 8 characters' />
+        </div>
+        <div class='field'>
+          <label for='selfPwNew2'>Confirm password</label>
+          <input id='selfPwNew2' type='password' autocomplete='new-password' placeholder='Re-enter password' />
+        </div>
+        <button class='btn' onclick='changeOwnPassword(false)'>Update password</button>
+        <div id='selfPwStatus' class='hint'></div>
+      </div>
+    </div>
   </div>
 
 <script>
 let adminToken = "";
+let currentUser = {username: "", is_admin: false, must_change: false};
 
 function authHeaders() {
   return {"Authorization": "Bearer " + adminToken, "Content-Type": "application/json"};
@@ -561,22 +729,52 @@ function setStatus(msg, ok) {
   el.className = 'hint ' + (ok ? 'ok' : 'err');
 }
 
+function setHint(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'hint ' + (ok ? 'ok' : 'err');
+}
+
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function showPanel(username) {
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('panelView').classList.remove('hidden');
-  document.getElementById('who').textContent = 'Signed in as ' + username;
+function fmtDate(epoch) {
+  return epoch ? new Date(epoch * 1000).toISOString().slice(0, 10) : '\u2014';
+}
+
+const ALL_VIEWS = ['loginView', 'setupView', 'pwChangeView', 'panelView', 'selfView'];
+function showView(id) {
+  for (const v of ALL_VIEWS) {
+    document.getElementById(v).classList.toggle('hidden', v !== id);
+  }
 }
 
 function logout() {
   adminToken = "";
+  currentUser = {username: "", is_admin: false, must_change: false};
   document.getElementById('p').value = "";
-  document.getElementById('panelView').classList.add('hidden');
-  document.getElementById('loginView').classList.remove('hidden');
+  showView('loginView');
   setStatus('', true);
+}
+
+function copyToken(t) {
+  if (navigator.clipboard) navigator.clipboard.writeText(t);
+}
+
+function routeAfterAuth() {
+  if (currentUser.must_change) {
+    showView(currentUser.is_admin ? 'setupView' : 'pwChangeView');
+    return;
+  }
+  if (currentUser.is_admin) {
+    document.getElementById('who').textContent = 'Signed in as ' + currentUser.username + ' (admin)';
+    showView('panelView');
+    loadUsers();
+  } else {
+    showView('selfView');
+    loadMe();
+  }
 }
 
 async function login() {
@@ -592,15 +790,87 @@ async function login() {
     const data = await resp.json();
     if (!resp.ok || !data.ok) { setStatus('Login failed. Check your credentials.', false); return; }
     adminToken = data.admin_session_token;
-    showPanel(data.username || username);
-    loadUsers();
+    currentUser = {username: data.username || username, is_admin: !!data.is_admin, must_change: !!data.must_change};
+    setStatus('', true);
+    routeAfterAuth();
   } catch (e) {
     setStatus('Network error, please retry.', false);
   }
 }
 
-function copyToken(t) {
-  if (navigator.clipboard) navigator.clipboard.writeText(t);
+async function completeSetup() {
+  const nu = document.getElementById('setU').value.trim();
+  const np = document.getElementById('setP').value;
+  const np2 = document.getElementById('setP2').value;
+  if (!nu) { setHint('setupStatus', 'New username is required.', false); return; }
+  if (np.length < 8) { setHint('setupStatus', 'Password must be at least 8 characters.', false); return; }
+  if (np !== np2) { setHint('setupStatus', 'Passwords do not match.', false); return; }
+  const resp = await fetch('/api/v1/manage/setup', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({new_username: nu, new_password: np})
+  });
+  const data = await resp.json();
+  if (!resp.ok || !data.ok) { setHint('setupStatus', data.error || 'setup failed', false); return; }
+  adminToken = "";
+  showView('loginView');
+  document.getElementById('u').value = nu;
+  document.getElementById('p').value = "";
+  setStatus('Account secured. Please sign in with your new credentials.', true);
+}
+
+async function changeOwnPassword(forced) {
+  const ids = forced
+    ? {n: 'pwNew', c: 'pwNew2', s: 'pwChangeStatus'}
+    : {n: 'selfPwNew', c: 'selfPwNew2', s: 'selfPwStatus'};
+  const np = document.getElementById(ids.n).value;
+  const np2 = document.getElementById(ids.c).value;
+  if (np.length < 8) { setHint(ids.s, 'Password must be at least 8 characters.', false); return; }
+  if (np !== np2) { setHint(ids.s, 'Passwords do not match.', false); return; }
+  const resp = await fetch('/api/v1/manage/password', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({new_password: np})
+  });
+  const data = await resp.json();
+  if (!resp.ok || !data.ok) { setHint(ids.s, data.error || 'change failed', false); return; }
+  document.getElementById(ids.n).value = "";
+  document.getElementById(ids.c).value = "";
+  currentUser.must_change = false;
+  if (forced) {
+    setHint(ids.s, 'Password updated.', true);
+    routeAfterAuth();
+  } else {
+    setHint(ids.s, 'Password updated successfully.', true);
+  }
+}
+
+async function loadMe() {
+  if (!adminToken) return;
+  const resp = await fetch('/api/v1/manage/me', {headers: authHeaders()});
+  const data = await resp.json();
+  if (!resp.ok || !data.ok) { if (resp.status === 401) logout(); return; }
+  const u = data.user;
+  currentUser.username = u.username;
+  document.getElementById('selfWho').textContent = 'Signed in as ' + u.username;
+  document.getElementById('selfUsername').textContent = u.username;
+  document.getElementById('selfStatus').innerHTML = u.is_active
+    ? "<span class='pill yes'>active</span>" : "<span class='pill no'>inactive</span>";
+  document.getElementById('selfExpires').textContent = u.permanent ? 'Permanent' : fmtDate(u.expires_at);
+  document.getElementById('selfToken').textContent = u.token;
+  document.getElementById('selfToken').setAttribute('title', u.token);
+  document.getElementById('selfCopy').onclick = () => copyToken(u.token);
+}
+
+function renderStatus(users) {
+  const total = users.length;
+  const active = users.filter(u => u.is_active).length;
+  const admins = users.filter(u => u.is_admin).length;
+  document.getElementById('sysStatus').innerHTML =
+    "<div class='stat'><span class='dot up'></span> Service online</div>" +
+    "<div class='stat'>Total users <b>" + total + "</b></div>" +
+    "<div class='stat'>Active <b>" + active + "</b></div>" +
+    "<div class='stat'>Admins <b>" + admins + "</b></div>";
 }
 
 async function loadUsers() {
@@ -610,13 +880,14 @@ async function loadUsers() {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   if (!resp.ok || !data.ok) { if (resp.status === 401) logout(); return; }
+  renderStatus(data.users);
   if (!data.users.length) {
     tbody.innerHTML = "<tr><td colspan='7' class='empty'>No users yet. Create one above.</td></tr>";
     return;
   }
   for (const u of data.users) {
     const tr = document.createElement('tr');
-    const exp = u.expires_at ? new Date(u.expires_at * 1000).toISOString().slice(0, 10) : '\u2014';
+    const exp = fmtDate(u.expires_at);
     const active = u.is_active ? "<span class='pill yes'>active</span>" : "<span class='pill no'>inactive</span>";
     const admin = u.is_admin ? "<span class='pill muted'>admin</span>" : '';
     const perm = u.permanent ? "<span class='pill yes'>yes</span>" : "<span class='pill no'>no</span>";
@@ -638,6 +909,7 @@ async function createUser() {
   if (!adminToken) return;
   const payload = {
     username: document.getElementById('newU').value.trim(),
+    password: document.getElementById('newPw').value.trim(),
     token: document.getElementById('newT').value.trim(),
     expires_at: document.getElementById('newE').value.trim(),
     permanent: document.getElementById('newP').checked,
@@ -650,7 +922,11 @@ async function createUser() {
   });
   const data = await resp.json();
   if (!resp.ok || !data.ok) { alert(data.error || 'create failed'); return; }
+  const u = data.user || {};
+  alert('User created.\n\nUsername: ' + u.username + '\nPassword: ' + (u.password || '(set)') +
+        '\nToken: ' + u.token + '\n\nShare these now. The password is shown only once.');
   document.getElementById('newU').value = '';
+  document.getElementById('newPw').value = '';
   document.getElementById('newT').value = '';
   document.getElementById('newE').value = '';
   loadUsers();
