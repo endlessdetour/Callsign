@@ -264,6 +264,29 @@ def _not_found(_err):
     return _deny_444()
 
 
+@app.after_request
+def _set_security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "base-uri 'none'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'"
+    )
+    # HSTS is safe here because the console is only served over HTTPS via the edge.
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers.pop("Server", None)
+    return response
+
+
 def issue_session_token(device_id: str, assigned_ip: str, owner_username: str, owner_token: str) -> str:
     now = int(time.time())
     expires_at = now + SESSION_TTL_SECONDS

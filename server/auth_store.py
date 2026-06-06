@@ -14,8 +14,6 @@ DEFAULT_DB_PATH = os.getenv("CALLSIGN_DB_PATH", "/etc/callsign/callsign.db")
 
 # Sentinel used to distinguish "field not provided" from an explicit None value.
 _UNSET = object()
-
-
 @dataclass
 class UserRecord:
     id: int
@@ -137,7 +135,12 @@ class AuthStore:
                 )
 
     def verify_credentials(self, username: str, password: str) -> Optional[UserRecord]:
-        """Verify username/password for ANY active user (admin or regular)."""
+        """Verify username/password for ANY active user (admin or regular).
+
+        Runs the password hash exactly once on every call (against the real
+        hash when the user exists, otherwise against a fixed dummy hash) so the
+        response time does not reveal whether a username exists.
+        """
         now = int(time.time())
         with self._lock:
             with self._connect() as conn:
@@ -150,6 +153,10 @@ class AuthStore:
                     """,
                     (username,),
                 ).fetchone()
+
+                stored_hash = str(row["password_hash"] or "") if row is not None else ""
+                password_ok = _verify_password(password, stored_hash or _DUMMY_PASSWORD_HASH)
+
                 if row is None:
                     return None
                 if int(row["is_active"]) != 1:
@@ -161,7 +168,7 @@ class AuthStore:
                     conn.commit()
                     return None
 
-                if not str(row["password_hash"] or "") or not _verify_password(password, str(row["password_hash"])):
+                if not stored_hash or not password_ok:
                     return None
 
                 return UserRecord(
@@ -574,3 +581,8 @@ def _verify_password(password: str, encoded: str) -> bool:
         return hmac.compare_digest(actual, expected)
     except Exception:
         return False
+
+
+# Fixed dummy hash used to equalize login timing when a username does not exist.
+# Computed once at import; the plaintext is random and unknown so it never matches.
+_DUMMY_PASSWORD_HASH = _hash_password(secrets.token_urlsafe(16))
