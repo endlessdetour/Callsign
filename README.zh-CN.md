@@ -2,53 +2,178 @@
 
 [English](README.md) | 简体中文
 
-Callsign 是一个轻量级 Overlay 网络原型。
+Callsign 是一个轻量级 Overlay 网络原型，采用控制面与数据面分离架构。
 
-## 服务端安装（一条命令）
+项目聚焦于快速协议验证、严格的 token 访问控制，以及可落地的反向代理部署路径。
 
-```bash
-wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo CALLSIGN_DOMAIN=cloud.example.com bash
-```
+## 特性
 
-这条命令会自动完成：拉取/更新代码、读取/输入域名、自动申请 Let's Encrypt 证书（失败才回退自签）、启用证书自动续期、写入域名到 nginx 配置、生成 token、写入 systemd、启动服务。
+- 分层架构：Flask 控制面 + WebSocket 隧道面 + Windows 客户端
+- 控制/隧道接口均基于 token 鉴权（必须携带 `X-Access-Token`）
+- 支持会话 bootstrap、heartbeat、服务端验证流程
+- 支持 echo 模式（验证传输）和 tun 模式（路由转发）
+- Windows GUI 提供托盘控制、配置管理和单实例保护
+- 通过 systemd (`callsign-nat.service`) 提供 Linux 开机 NAT 恢复能力
 
-可选参数：
+## 架构
 
-- `CALLSIGN_BRANCH=fast_iteration` 安装指定分支
-- `CALLSIGN_TRUST_CLOUDFLARE=1` 保留 nginx 的 Cloudflare 来源限制
-- `CALLSIGN_REQUEST_SSL_CERT=0` 跳过 Let's Encrypt 申请并强制使用自签证书
+1. 控制面 (`server/control`)
+- Bootstrap
+- 会话签发
+- 心跳与 token 校验
 
-默认行为：
+2. 隧道面 (`server/tunnel`)
+- 鉴权 WebSocket 入口
+- 数据包传输（echo / tun）
+- 基于控制面的 bearer 校验
 
-- 交互式执行：安装器会询问域名，以及是否启用 Cloudflare-geo 限制（默认 `No`）
-- 交互式执行：安装器会询问是否申请 Let's Encrypt SSL 证书（默认 `Yes`）
-- 非交互执行：默认不启用 Cloudflare-geo，只有显式传入 `CALLSIGN_TRUST_CLOUDFLARE=1` 才启用
-- 非交互执行：默认申请 Let's Encrypt，只有显式传入 `CALLSIGN_REQUEST_SSL_CERT=0` 才跳过申请
+3. 客户端 (`client/windows`)
+- Bootstrap 与 heartbeat 循环
+- 隧道连接生命周期
+- 适配器抽象（mock / Wintun）
 
-## 客户端下载
+详细设计见 [docs/architecture.md](docs/architecture.md)
 
-- Windows ARM64：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-arm64.zip)
-- Windows x64：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x64.zip)
-- Windows x86：[点此下载](https://github.com/endlessdetour/Callsign/releases/latest/download/callsign-windows-x86.zip)
+## 快速开始
 
-说明：
-- ARM64 链接是当前主要目标。
-- 其他包你后续打好后按同样命名发布即可直接下载。
-
-## 本地快速运行
+### 1) 环境准备
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+```
+
+### 2) 最小配置
+
+```powershell
+Copy-Item .env.example .env
+```
+
+至少设置：
+
+```text
+CALLSIGN_ACCESS_TOKEN=<strong-random-token>
+```
+
+### 3) 启动服务
+
+控制面：
+
+```powershell
 ./scripts/start-control.ps1
+```
+
+隧道面：
+
+```powershell
 ./scripts/start-tunnel.ps1
+```
+
+客户端：
+
+```powershell
 ./scripts/start-client.ps1 -ControlUrl https://overlay.example.com
 ```
 
-## 文档入口
+仅用于本地明文测试：
 
-- 架构说明：[docs/architecture.md](docs/architecture.md)
-- Nginx 示例：[deploy/nginx.conf.example](deploy/nginx.conf.example)
-- systemd 文件：[deploy/systemd](deploy/systemd)
-- 一键安装脚本：[deploy/install-server.sh](deploy/install-server.sh)
+```powershell
+./scripts/start-client.ps1 -ControlUrl http://127.0.0.1:5000 -TunnelUrl ws://127.0.0.1:8443/connect-ws -AllowInsecure
+```
+
+## 构建
+
+```powershell
+./scripts/build-exe.ps1
+```
+
+输出：
+
+- `dist/callsign/callsign.exe`
+- `dist/callsign-windows-arm64.zip`
+
+当前为 onedir 打包，请分发 zip 或完整目录，不要只分发单个 exe。
+
+## 配置
+
+核心变量：
+
+- `CALLSIGN_ACCESS_TOKEN`：直接 token 值
+- `CALLSIGN_ACCESS_TOKEN_FILE`：token 文件路径（默认 `/etc/callsign/access_token`）
+- `CALLSIGN_TUNNEL_PATH`：WebSocket 路径（需与 control/tunnel/proxy 一致）
+
+控制面变量：
+
+- `CALLSIGN_SESSION_TTL`（默认 `3600`）
+- `CALLSIGN_TUNNEL_PUBLIC_URL`
+
+隧道面变量：
+
+- `CONTROL_VALIDATE_URL`（默认 `http://127.0.0.1:5000/api/v1/validate`）
+- `CALLSIGN_TUN_MODE`（`echo` 或 `tun`）
+- `CALLSIGN_TUN_INTERFACE`（默认 `tun0`）
+- `CALLSIGN_TUN_LOCAL_CIDR`（默认 `10.99.0.1/24`）
+
+## 服务器部署说明
+
+- 反向代理基线：`deploy/nginx.conf.example`
+- NAT 持久化资产：
+  - `deploy/systemd/callsign-nat.service`
+  - `deploy/systemd/callsign-nat-setup.sh`
+
+推荐 Linux token 初始化：
+
+```bash
+sudo install -d -m 700 /etc/callsign
+sudo sh -c 'umask 077; [ -s /etc/callsign/access_token ] || python3 - <<"PY" > /etc/callsign/access_token
+import secrets
+print(secrets.token_urlsafe(32))
+PY'
+sudo chmod 600 /etc/callsign/access_token
+```
+
+在 `/etc/proxy-server.env` 设置：
+
+```bash
+CALLSIGN_ACCESS_TOKEN_FILE=/etc/callsign/access_token
+```
+
+## 测试
+
+执行全量回归：
+
+```powershell
+.\.venv\Scripts\python.exe scripts/server_auth_surface_smoke.py
+.\.venv\Scripts\python.exe scripts/gui_full_regression_test.py
+.\.venv\Scripts\python.exe scripts/gui_startup_elevation_test.py
+.\.venv\Scripts\python.exe scripts/gui_single_instance_smoke.py
+.\.venv\Scripts\python.exe scripts/gui_tray_smoke_test.py
+.\.venv\Scripts\python.exe scripts/gui_tray_runtime_smoke.py
+```
+
+## 安全清单（推送前）
+
+- 确保真实 token 不进入 git 历史
+- `.env`、`.env.*`、`deploy/proxy-server.env` 只保留在本地
+- `client_profiles.json`、`*.log`、`*.ppk` 不纳入版本控制
+- 凭据一旦出现在终端历史、日志或截图中，应立即轮换
+
+## 仓库结构
+
+- `server/control`：控制面服务
+- `server/tunnel`：隧道面服务
+- `client/windows`：Windows GUI 与 agent
+- `scripts`：构建、运行、部署、测试脚本
+- `deploy`：nginx 与 systemd 部署资产
+- `third_party/wintun`：Wintun 二进制与许可证
+
+## 项目状态
+
+Callsign 当前处于原型阶段，重点是行为验证与渐进式安全加固。
+
+暂不在当前范围：
+
+- 生产级策略引擎
+- 端到端 mTLS 身份体系
+- 完整可观测与 SRE 运维体系
