@@ -123,7 +123,7 @@ def _parse_expiry_to_epoch(raw_value: str, permanent: bool) -> Optional[int]:
 
 
 def _is_client_api(path: str) -> bool:
-    return path.startswith("/api/v1/") and not path.startswith("/api/v1/admin/")
+    return path.startswith("/api/v1/") and not path.startswith("/api/v1/manage/")
 
 
 def _admin_user_from_request():
@@ -136,9 +136,9 @@ def _admin_user_from_request():
 
 @app.before_request
 def _require_user_token_for_client_apis():
-    if request.path == "/admin":
+    if request.path == "/login":
         return None
-    if request.path.startswith("/api/v1/admin/"):
+    if request.path.startswith("/api/v1/manage/"):
         return None
     if request.path != "/healthz" and not _is_client_api(request.path):
         return _deny_444()
@@ -299,7 +299,7 @@ def validate():
     return jsonify({"ok": True, "device_id": session.device_id, "assigned_ip": session.assigned_ip})
 
 
-@app.post("/api/v1/admin/login")
+@app.post("/api/v1/manage/login")
 def admin_login():
     payload = request.get_json(silent=True) or {}
     username = str(payload.get("username", "")).strip()
@@ -313,14 +313,14 @@ def admin_login():
     return jsonify({"ok": True, "admin_session_token": session_token, "username": user.username})
 
 
-@app.get("/api/v1/admin/users")
+@app.get("/api/v1/manage/users")
 def admin_list_users():
     if _admin_user_from_request() is None:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
     return jsonify({"ok": True, "users": AUTH_STORE.list_users()})
 
 
-@app.post("/api/v1/admin/users")
+@app.post("/api/v1/manage/users")
 def admin_create_user():
     if _admin_user_from_request() is None:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
@@ -342,7 +342,7 @@ def admin_create_user():
     return jsonify({"ok": True, "user": user})
 
 
-@app.patch("/api/v1/admin/users/<username>")
+@app.patch("/api/v1/manage/users/<username>")
 def admin_update_user(username: str):
     if _admin_user_from_request() is None:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
@@ -367,7 +367,7 @@ def admin_update_user(username: str):
     return jsonify({"ok": True})
 
 
-@app.delete("/api/v1/admin/users/<username>")
+@app.delete("/api/v1/manage/users/<username>")
 def admin_delete_user(username: str):
     if _admin_user_from_request() is None:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
@@ -421,7 +421,7 @@ function authHeaders() {
 }
 
 async function login() {
-  const resp = await fetch('/api/v1/admin/login', {
+    const resp = await fetch('/api/v1/manage/login', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({username: document.getElementById('u').value, password: document.getElementById('p').value})
@@ -438,7 +438,7 @@ async function login() {
 
 async function loadUsers() {
   if (!adminToken) return;
-  const resp = await fetch('/api/v1/admin/users', {headers: authHeaders()});
+    const resp = await fetch('/api/v1/manage/users', {headers: authHeaders()});
   const data = await resp.json();
   const tbody = document.querySelector('#tbl tbody');
   tbody.innerHTML = '';
@@ -458,7 +458,7 @@ async function createUser() {
     expires_at: document.getElementById('newE').value,
     permanent: document.getElementById('newP').checked,
   };
-  const resp = await fetch('/api/v1/admin/users', {
+    const resp = await fetch('/api/v1/manage/users', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload)
@@ -470,7 +470,7 @@ async function createUser() {
 
 async function delUser(name) {
   if (!adminToken) return;
-  const resp = await fetch('/api/v1/admin/users/' + encodeURIComponent(name), {
+    const resp = await fetch('/api/v1/manage/users/' + encodeURIComponent(name), {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -483,11 +483,6 @@ async function delUser(name) {
 </html>
 """
     return Response(html, mimetype="text/html")
-
-
-@app.get("/admin")
-def admin_page():
-    return _render_admin_page()
 
 
 @app.get("/login")
