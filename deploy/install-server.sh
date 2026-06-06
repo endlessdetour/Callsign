@@ -273,7 +273,14 @@ systemctl restart proxy-control.service
 systemctl restart proxy-tunnel.service
 
 TOKEN_VALUE="$(cat "${TOKEN_FILE}")"
-HEALTH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "X-Access-Token: ${TOKEN_VALUE}" http://127.0.0.1:5000/healthz || true)"
+HEALTH_CODE="000"
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  HEALTH_CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "X-Access-Token: ${TOKEN_VALUE}" http://127.0.0.1:5000/healthz || true)"
+  if [[ "${HEALTH_CODE}" == "200" ]]; then
+    break
+  fi
+  sleep 1
+done
 echo "[callsign] install complete"
 echo "[callsign] domain: ${DOMAIN}"
 echo "[callsign] tls cert: ${TLS_CERT_PATH}"
@@ -287,6 +294,12 @@ echo "------------------------------------------------"
 echo "[callsign] domain: ${DOMAIN}"
 echo "[callsign] token file: ${TOKEN_FILE}"
 echo "[callsign] control health: ${HEALTH_CODE}"
+for _ in 1 2 3 4 5; do
+  if [[ -f /etc/callsign/initial_admin_credentials.txt ]]; then
+    break
+  fi
+  sleep 1
+done
 if [[ -f /etc/callsign/initial_admin_credentials.txt ]]; then
   echo "[callsign] initial admin credentials:"
   sed -n '1p' /etc/callsign/initial_admin_credentials.txt
