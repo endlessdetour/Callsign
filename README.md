@@ -68,13 +68,13 @@ health.
 
 ## Client Downloads
 
-- Windows ARM64: [Download from Releases](https://github.com/endlessdetour/Callsign/releases)
-- Windows x64: pending build
-- Windows x86: pending build
+- Windows ARM64: [Download from Releases](https://github.com/endlessdetour/Callsign/releases) (`callsign-windows-arm64.zip`)
+- Windows x64: [Download from Releases](https://github.com/endlessdetour/Callsign/releases) (`callsign-windows-amd64.zip`)
+- macOS: support pending
 
 Notes:
-- ARM64 is the current target; grab the latest `callsign-windows-arm64.zip` from the Releases page.
-- Other builds can be published later with the same naming pattern.
+- The build automatically bundles the matching Wintun driver for the host architecture (arm64 / x64), so all Windows packages share the same build path and are published under the `callsign-windows-<arch>.zip` naming pattern.
+- A macOS client is not available yet; only the Windows client is shipped today.
 
 ## Quick Local Run
 

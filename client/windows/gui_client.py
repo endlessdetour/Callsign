@@ -80,7 +80,8 @@ if os.name == "nt":
             ("cbWndExtra", ctypes.c_int),
             ("hInstance", ctypes.wintypes.HINSTANCE),
             ("hIcon", ctypes.wintypes.HICON),
-            ("hCursor", ctypes.wintypes.HCURSOR),
+            # ctypes.wintypes has no HCURSOR; a cursor handle is just a HANDLE.
+            ("hCursor", ctypes.wintypes.HANDLE),
             ("hbrBackground", ctypes.wintypes.HBRUSH),
             ("lpszMenuName", ctypes.wintypes.LPCWSTR),
             ("lpszClassName", ctypes.wintypes.LPCWSTR),
