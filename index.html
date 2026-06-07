@@ -121,8 +121,8 @@
     display: flex; align-items: center; gap: 14px; justify-content: space-between;
     background: #060911; border: 1px solid var(--border); border-radius: 12px;
     padding: 16px 18px; font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 13.5px;
-    overflow-x: auto;
   }
+  .cmd-scroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; }
   .cmd code { color: #cbe7ff; white-space: nowrap; }
   .cmd code .tok { color: var(--accent); }
   .copy-btn {
@@ -130,6 +130,10 @@
     padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; transition: all .15s ease;
   }
   .copy-btn:hover { border-color: var(--brand); color: var(--brand); }
+  @media (max-width: 600px) {
+    .cmd { flex-direction: column; align-items: stretch; gap: 12px; }
+    .copy-btn { width: 100%; }
+  }
   .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
 
   /* Security strip */
@@ -232,8 +236,16 @@
       <div class="prep-item">
         <div class="prep-num">2</div>
         <div class="prep-body">
+          <h4 data-en="A Debian/Ubuntu server, root access, ports 80 &amp; 443 open" data-zh="一台 Debian/Ubuntu 服务器，有 root 权限，放行 80 与 443 端口">A Debian/Ubuntu server, root access, ports 80 &amp; 443 open</h4>
+          <p data-en="The installer uses <code>apt</code>, so use Debian or Ubuntu, and run it with <code>sudo</code>. Open inbound TCP <b>80</b> and <b>443</b> in your cloud firewall / security group — port 80 is required for the automatic Let's Encrypt certificate." data-zh="安装脚本使用 <code>apt</code>，所以请用 Debian 或 Ubuntu，并以 <code>sudo</code> 运行。在云防火墙 / 安全组放行入站 TCP <b>80</b> 与 <b>443</b> —— 端口 80 是自动签发 Let's Encrypt 证书所必需的。">The installer uses <code>apt</code>, so use Debian or Ubuntu, and run it with <code>sudo</code>. Open inbound TCP <b>80</b> and <b>443</b> in your cloud firewall / security group — port 80 is required for the automatic Let's Encrypt certificate.</p>
+          <a class="prep-link" href="https://documentation.ubuntu.com/server/how-to/security/firewalls/" target="_blank" rel="noopener" data-en="How to open firewall ports (UFW) →" data-zh="如何放行防火墙端口（UFW）→">How to open firewall ports (UFW) →</a>
+        </div>
+      </div>
+      <div class="prep-item">
+        <div class="prep-num">3</div>
+        <div class="prep-body">
           <h4 data-en="Recommended: put Cloudflare in front to hide your server IP" data-zh="推荐：用 Cloudflare 套在前面，隐藏服务器真实 IP">Recommended: put Cloudflare in front to hide your server IP</h4>
-          <p data-en="Move your domain's nameservers to Cloudflare and enable the orange-cloud proxy. Visitors only ever see Cloudflare's IPs — your origin server stays hidden and DDoS-shielded." data-zh="把域名的 DNS 托管到 Cloudflare 并开启橙色云朵代理。访客只看到 Cloudflare 的 IP —— 你的源站服务器被隐藏，同时获得 DDoS 防护。">Move your domain's nameservers to Cloudflare and enable the orange-cloud proxy. Visitors only ever see Cloudflare's IPs — your origin server stays hidden and DDoS-shielded.</p>
+          <p data-en="Move your domain's nameservers to Cloudflare and enable the orange-cloud proxy, then set SSL/TLS mode to <b>Full (strict)</b>. Visitors only ever see Cloudflare's IPs — your origin stays hidden and DDoS-shielded. Tip: keep the record DNS-only for the first install so the certificate can be issued, then turn the proxy on." data-zh="把域名的 DNS 托管到 Cloudflare 并开启橙色云朵代理，然后把 SSL/TLS 模式设为 <b>完全（严格）</b>。访客只看到 Cloudflare 的 IP —— 源站被隐藏并获得 DDoS 防护。小贴士：首次安装时先保持记录为「仅 DNS」以便签发证书，签好后再打开代理。">Move your domain's nameservers to Cloudflare and enable the orange-cloud proxy, then set SSL/TLS mode to <b>Full (strict)</b>. Visitors only ever see Cloudflare's IPs — your origin stays hidden and DDoS-shielded. Tip: keep the record DNS-only for the first install so the certificate can be issued, then turn the proxy on.</p>
           <a class="prep-link" href="https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/" target="_blank" rel="noopener" data-en="Set up a domain on Cloudflare →" data-zh="在 Cloudflare 上接入域名 →">Set up a domain on Cloudflare →</a>
         </div>
       </div>
@@ -273,7 +285,7 @@
         </div>
       </div>
       <div class="cmd">
-        <code id="install-cmd"><span class="tok">wget</span> -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | <span class="tok">sudo</span> CALLSIGN_BRANCH=fast_iteration bash</code>
+        <div class="cmd-scroll"><code id="install-cmd"><span class="tok">wget</span> -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | <span class="tok">sudo</span> CALLSIGN_BRANCH=fast_iteration bash</code></div>
         <button class="copy-btn" id="copyBtn" data-cmd="wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash" data-en="Copy" data-zh="复制">Copy</button>
       </div>
     </div>
