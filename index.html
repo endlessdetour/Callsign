@@ -96,6 +96,22 @@
   .card h3 { font-size: 17px; margin-bottom: 8px; }
   .card p { color: var(--muted); font-size: 14.5px; }
 
+  /* About / story */
+  #about { background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .story { max-width: 760px; margin: 0 auto; }
+  .story-lead { text-align: center; font-size: clamp(17px, 2.4vw, 21px); color: var(--text); line-height: 1.75; }
+  .story-lead b { color: var(--brand); }
+  .story-lead em { color: var(--accent); font-style: normal; }
+  .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 34px 0; }
+  .story-col { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
+  .story-col .story-ico { font-size: 28px; margin-bottom: 12px; }
+  .story-col h3 { font-size: 16px; margin-bottom: 8px; }
+  .story-col p { color: var(--muted); font-size: 14.5px; }
+  .pull { text-align: center; font-size: clamp(18px, 2.6vw, 25px); font-weight: 800; line-height: 1.5; letter-spacing: -0.3px; margin: 0; padding: 6px 0;
+    background: linear-gradient(120deg, var(--brand), var(--brand-2) 60%, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  @media (max-width: 600px) { .story-grid { grid-template-columns: 1fr; } }
+
   /* Steps / deploy */
   .deploy { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 22px; padding: 40px; }
   /* Prep checklist */
@@ -164,6 +180,7 @@
   <div class="wrap nav-inner">
     <a class="logo" href="#top"><span class="dot"></span> Callsign</a>
     <div class="nav-links">
+      <a href="#about" data-en="About" data-zh="关于">About</a>
       <a href="#features" data-en="Features" data-zh="功能">Features</a>
       <a href="#prepare" data-en="Prep" data-zh="准备">Prep</a>
       <a href="#deploy" data-en="Deploy" data-zh="部署">Deploy</a>
@@ -186,6 +203,31 @@
     </div>
   </div>
 </header>
+
+<section id="about">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow" data-en="Why &quot;Callsign&quot;?" data-zh="为什么叫 Callsign？">Why &quot;Callsign&quot;?</div>
+      <h2 data-en="Your name on the air" data-zh="空中，那个只属于你的名字">Your name on the air</h2>
+    </div>
+    <div class="story">
+      <p class="story-lead" data-en="In amateur radio, every licensed operator earns a <b>callsign</b> — a short, unique identifier that's theirs alone. Key the mic and you announce it: <em>this is me, I'm on the air, and you can reach me.</em> Identity, presence, and trust — all in a handful of characters." data-zh="在业余无线电（HAM）里，每一位持照操作员都会获得一个属于自己的<b>呼号（callsign）</b>——一串简短、独一无二的标识。按下话筒，你报出它：<em>这是我，我已上线，可以联络。</em>身份、在场与信任——全都浓缩在这几个字符里。">In amateur radio, every licensed operator earns a <b>callsign</b> — a short, unique identifier that's theirs alone. Key the mic and you announce it: <em>this is me, I'm on the air, and you can reach me.</em> Identity, presence, and trust — all in a handful of characters.</p>
+      <div class="story-grid">
+        <div class="story-col">
+          <div class="story-ico">📻</div>
+          <h3 data-en="On the air" data-zh="在空中">On the air</h3>
+          <p data-en="A callsign isn't handed out by a platform you rent — it's yours. It follows you across any band, any rig. No middleman owns who you are." data-zh="呼号不是某个你租用的平台发给你的——它属于你自己。无论换到哪个频段、哪台设备，它都跟着你。没有中间商掌控“你是谁”。">A callsign isn't handed out by a platform you rent — it's yours. It follows you across any band, any rig. No middleman owns who you are.</p>
+        </div>
+        <div class="story-col">
+          <div class="story-ico">🛰️</div>
+          <h3 data-en="On your network" data-zh="在你的网络里">On your network</h3>
+          <p data-en="Callsign brings that idea to your network. Every device you bring online gets its own verified identity and address — reachable by you, owned by you, on infrastructure you run." data-zh="Callsign 把同样的理念带进网络。你接入的每一台设备，都获得经过验证的身份与独立地址——只对你可达、由你掌控，运行在你自己的基础设施上。">Callsign brings that idea to your network. Every device you bring online gets its own verified identity and address — reachable by you, owned by you, on infrastructure you run.</p>
+        </div>
+      </div>
+      <p class="pull" data-en="Spin up Callsign and you're not borrowing a corner of someone else's network — you're claiming your own callsign on the air." data-zh="启动 Callsign，你不是在别人的网络里借一块角落——而是在空中，亮出属于你自己的呼号。">Spin up Callsign and you're not borrowing a corner of someone else's network — you're claiming your own callsign on the air.</p>
+    </div>
+  </div>
+</section>
 
 <section id="features">
   <div class="wrap">
