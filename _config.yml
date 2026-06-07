@@ -1,0 +1,18 @@
+title: Callsign
+description: Self-hosted overlay network with a built-in admin console for user and access management.
+theme: jekyll-theme-cayman
+show_downloads: true
+
+# Exclude non-site files from the generated GitHub Pages output.
+exclude:
+  - client/
+  - server/
+  - deploy/
+  - scripts/
+  - third_party/
+  - assets/
+  - "*.spec"
+  - requirements.txt
+  - .venv/
+  - dist/
+  - build/
