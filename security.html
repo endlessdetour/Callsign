@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Security — Callsign</title>
+<meta name="description" content="Callsign's security model: hashed credentials, session tokens, anti-spoofing, hardened nginx, and DPAPI-encrypted client tokens." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
+<link rel="stylesheet" href="assets/docs.css" />
+<script src="assets/i18n.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html"><span class="dot"></span> Callsign</a>
+    <div class="nav-right">
+      <a href="architecture.html" data-en="Architecture" data-zh="架构">Architecture</a>
+      <a href="index.html#deploy" data-en="Deploy" data-zh="部署">Deploy</a>
+      <button class="link-btn" data-lang-toggle data-en="中文" data-zh="English">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <div class="eyebrow" data-en="Documentation" data-zh="文档">Documentation</div>
+    <h1 data-en="Security" data-zh="安全模型">Security</h1>
+    <p class="lede" data-en="Strong, sensible defaults that you don't have to configure. Here's exactly what's protecting your deployment." data-zh="强而合理的默认配置，无需你手动设置。下面是保护你部署的具体机制。">Strong, sensible defaults that you don't have to configure. Here's exactly what's protecting your deployment.</p>
+
+    <h2 data-en="Authentication" data-zh="身份认证">Authentication</h2>
+    <ul>
+      <li data-en="Passwords are hashed with <b>pbkdf2_sha256</b> (120,000 rounds) plus a per-user salt." data-zh="密码使用 <b>pbkdf2_sha256</b>（12 万轮）加逐用户盐值进行哈希。">Passwords are hashed with <b>pbkdf2_sha256</b> (120,000 rounds) plus a per-user salt.</li>
+      <li data-en="Credential comparison is constant-time, and login timing is equalized to prevent username enumeration." data-zh="凭据比较为恒定时间，且登录耗时被均衡化，以防止用户名枚举。">Credential comparison is constant-time, and login timing is equalized to prevent username enumeration.</li>
+      <li data-en="<b>Forced first-login</b> credential change: the seeded <code>admin</code> account is disabled once you set your own admin." data-zh="<b>强制首次登录</b>修改凭据：一旦你设置了自己的管理员，初始 <code>admin</code> 账户即被禁用。"><b>Forced first-login</b> credential change: the seeded <code>admin</code> account is disabled once you set your own admin.</li>
+    </ul>
+
+    <h2 data-en="Sessions &amp; tokens" data-zh="会话与令牌">Sessions &amp; tokens</h2>
+    <ul>
+      <li data-en="Session tokens are server-stored and generated with <code>secrets.token_urlsafe</code>." data-zh="会话令牌由服务端存储，使用 <code>secrets.token_urlsafe</code> 生成。">Session tokens are server-stored and generated with <code>secrets.token_urlsafe</code>.</li>
+      <li data-en="Each device gets its own overlay IP lease, so addresses never collide." data-zh="每个设备获得独立的覆盖 IP 租约，地址永不冲突。">Each device gets its own overlay IP lease, so addresses never collide.</li>
+      <li data-en="Resetting a user's password revokes their sessions and forces a change on next login." data-zh="重置某用户密码会吊销其会话，并强制其下次登录时修改。">Resetting a user's password revokes their sessions and forces a change on next login.</li>
+    </ul>
+
+    <h2 data-en="Network &amp; edge" data-zh="网络与边缘">Network &amp; edge</h2>
+    <ul>
+      <li data-en="The control plane runs under <b>gunicorn behind nginx</b>; only HTTPS on 443 is exposed and everything else returns <code>444</code> (closed)." data-zh="控制平面运行在 <b>nginx 之后的 gunicorn</b> 上；仅暴露 443 的 HTTPS，其余一律返回 <code>444</code>（关闭）。">The control plane runs under <b>gunicorn behind nginx</b>; only HTTPS on 443 is exposed and everything else returns <code>444</code> (closed).</li>
+      <li data-en="<b>Tunnel source-IP anti-spoofing</b> validates the real peer address." data-zh="<b>隧道源 IP 防源欺骗</b>校验真实对端地址。"><b>Tunnel source-IP anti-spoofing</b> validates the real peer address.</li>
+      <li data-en="Optional <b>Cloudflare-only origin gate</b> (nginx <code>geo</code> on the real peer address) so only Cloudflare can reach your origin." data-zh="可选的 <b>仅 Cloudflare 回源闸门</b>（nginx 基于真实对端地址的 <code>geo</code>），使只有 Cloudflare 能触达你的源站。">Optional <b>Cloudflare-only origin gate</b> (nginx <code>geo</code> on the real peer address) so only Cloudflare can reach your origin.</li>
+    </ul>
+
+    <h2 data-en="Hardening headers" data-zh="加固响应头">Hardening headers</h2>
+    <p data-en="Every response carries security headers and the server fingerprint is stripped:" data-zh="每个响应都带有安全响应头，并移除服务器指纹：">Every response carries security headers and the server fingerprint is stripped:</p>
+    <ul>
+      <li><code>Content-Security-Policy</code></li>
+      <li><code>Strict-Transport-Security</code> (HSTS)</li>
+      <li><code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code></li>
+      <li><code>server_tokens off</code> <span data-en="and the default nginx welcome page is closed." data-zh="，并关闭默认 nginx 欢迎页。">and the default nginx welcome page is closed.</span></li>
+    </ul>
+
+    <h2 data-en="Client at rest" data-zh="客户端落盘">Client at rest</h2>
+    <ul>
+      <li data-en="The Windows client encrypts its access token at rest with <b>DPAPI</b>, so the saved profile file does not contain a plaintext token." data-zh="Windows 客户端使用 <b>DPAPI</b> 加密落盘访问令牌，因此保存的配置文件不含明文令牌。">The Windows client encrypts its access token at rest with <b>DPAPI</b>, so the saved profile file does not contain a plaintext token.</li>
+    </ul>
+
+    <div class="callout" data-en="This is a hardened prototype. For production, move from a single shared access token toward mTLS and signed short-lived tokens — see the Architecture page." data-zh="这是一个已加固的原型。生产环境建议从单一共享访问令牌演进到 mTLS 与签名短时令牌 —— 详见架构页。">This is a hardened prototype. For production, move from a single shared access token toward mTLS and signed short-lived tokens — see the Architecture page.</div>
+
+    <a class="back" href="index.html" data-en="← Back to home" data-zh="← 返回首页">← Back to home</a>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div data-en="© 2026 Callsign · Self-hosted overlay network" data-zh="© 2026 Callsign · 自托管覆盖网络">© 2026 Callsign · Self-hosted overlay network</div>
+    <div class="foot-links">
+      <a href="index.html" data-en="Home" data-zh="首页">Home</a>
+      <a href="architecture.html" data-en="Architecture" data-zh="架构">Architecture</a>
+      <a href="deploy.html" data-en="Deploy" data-zh="部署">Deploy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
