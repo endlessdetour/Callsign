@@ -131,7 +131,7 @@ server {
       <tbody>
         <tr><td><code>proxy-control.service</code></td><td data-en="Control plane (Flask under gunicorn) + admin console." data-zh="控制平面（gunicorn 下的 Flask）+ 管理控制台。">Control plane (Flask under gunicorn) + admin console.</td></tr>
         <tr><td><code>proxy-tunnel.service</code></td><td data-en="WebSocket tunnel / data plane." data-zh="WebSocket 隧道 / 数据平面。">WebSocket tunnel / data plane.</td></tr>
-        <tr><td><code>callsign-nat.service</code></td><td data-en="Sets up NAT / forwarding for the overlay <code>tun</code> interface." data-zh="为覆盖网络 <code>tun</code> 接口配置 NAT / 转发。">Sets up NAT / forwarding for the overlay <code>tun</code> interface.</td></tr>
+        <tr><td><code>callsign-nat.service</code></td><td data-en="Sets up NAT / forwarding for the private-network <code>tun</code> interface." data-zh="为私有网络 <code>tun</code> 接口配置 NAT / 转发。">Sets up NAT / forwarding for the private-network <code>tun</code> interface.</td></tr>
       </tbody>
     </table>
     <pre><code># Check status / logs
@@ -150,7 +150,7 @@ journalctl -u proxy-control.service -f</code></pre>
 
 <footer>
   <div class="wrap foot-inner">
-    <div data-en="© 2026 Callsign · Self-hosted overlay network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted overlay network</div>
+    <div data-en="© 2026 Callsign · Self-hosted private network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted private network</div>
     <div class="foot-links">
       <a href="index.html" data-en="Home" data-zh="首页">Home</a>
       <a href="architecture.html" data-en="Architecture" data-zh="架构">Architecture</a>

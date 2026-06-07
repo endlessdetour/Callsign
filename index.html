@@ -198,7 +198,7 @@
       <div class="card">
         <div class="ico">🛰️</div>
         <h3 data-en="Encrypted tunnel" data-zh="加密隧道">Encrypted tunnel</h3>
-        <p data-en="WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path." data-zh="WebSocket 控制与隐道双平面，逐设备会话令牌，配合 Linux <code>tun</code> 数据通道。">WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
+        <p data-en="WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path." data-zh="WebSocket 控制与隧道双平面，逐设备会话令牌，配合 Linux <code>tun</code> 数据通道。">WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
       </div>
       <div class="card">
         <div class="ico">🎛️</div>
@@ -303,8 +303,8 @@
     </div>
     <div class="sec-list">
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login." data-zh="<b>pbkdf2_sha256</b>（12 万轮）+ 逐用户盐值，恒时间比较，登录耗时均衡。"><b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions." data-zh="<b>服务端存储的会话令牌</b>，逐设备分配覆盖 IP 租约 —— 地址不冲突。"><b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate." data-zh="<b>隐道源 IP 防源欺骗</b>，可选的仅 Cloudflare 回源闸门。"><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Server-stored session tokens</b> with a per-device IP lease — no address collisions." data-zh="<b>服务端存储的会话令牌</b>，逐设备分配独立 IP 租约 —— 地址不冲突。"><b>Server-stored session tokens</b> with a per-device IP lease — no address collisions.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate." data-zh="<b>隧道源 IP 防伪造</b>，可选的仅 Cloudflare 回源闸门。"><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>." data-zh="每个响应都带 <b>安全响应头</b>（CSP、HSTS、X-Frame-Options）；<code>server_tokens off</code>。"><b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>DPAPI</b>-encrypted client access token at rest on Windows." data-zh="Windows 上客户端访问令牌使用 <b>DPAPI</b> 加密落盘。"><b>DPAPI</b>-encrypted client access token at rest on Windows.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Forced first-login</b> credential change; seeded admin disabled afterward." data-zh="<b>强制首次登录</b>修改凭据；初始管理员随后禁用。"><b>Forced first-login</b> credential change; seeded admin disabled afterward.</p></div>
@@ -334,7 +334,7 @@
 
 <footer>
   <div class="wrap foot-inner">
-    <div data-en="© 2026 Callsign · Self-hosted overlay network" data-zh="© 2026 Callsign · 自托管覆盖网络">© 2026 Callsign · Self-hosted overlay network</div>
+    <div data-en="© 2026 Callsign · Self-hosted private network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted private network</div>
     <div class="foot-links">
       <a href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="Releases" data-zh="下载">Releases</a>
