@@ -46,6 +46,11 @@
   .nav-links { display: flex; gap: 26px; align-items: center; font-size: 14px; color: var(--muted); }
   .nav-links a:hover { color: var(--text); }
   .nav-cta { padding: 8px 16px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff !important; font-weight: 600; }
+  .lang-toggle {
+    cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    padding: 7px 13px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: all .15s ease;
+  }
+  .lang-toggle:hover { color: var(--text); border-color: var(--brand); }
   @media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
 
   /* Hero */
@@ -144,23 +149,24 @@
   <div class="wrap nav-inner">
     <a class="logo" href="#top"><span class="dot"></span> Callsign</a>
     <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#deploy">Deploy</a>
-      <a href="#security">Security</a>
-      <a href="#docs">Docs</a>
-      <a class="nav-cta" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">Download</a>
+      <a href="#features" data-en="Features" data-zh="功能">Features</a>
+      <a href="#deploy" data-en="Deploy" data-zh="部署">Deploy</a>
+      <a href="#security" data-en="Security" data-zh="安全">Security</a>
+      <a href="#docs" data-en="Docs" data-zh="文档">Docs</a>
+      <a class="nav-cta" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="Download" data-zh="下载">Download</a>
+      <button class="lang-toggle" id="langBtn" data-en="中文" data-zh="EN">中文</button>
     </div>
   </div>
 </nav>
 
 <header id="top" class="hero">
   <div class="wrap">
-    <span class="badge"><span class="pulse"></span> Self-hosted · One-command deploy</span>
-    <h1>Your own <span class="grad">overlay network</span>,<br />up in under a minute.</h1>
-    <p class="sub">Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected.</p>
+    <span class="badge"><span class="pulse"></span> <span data-en="Self-hosted · One-command deploy" data-zh="自托管 · 一条命令部署">Self-hosted · One-command deploy</span></span>
+    <h1 data-en="Your own <span class='grad'>overlay network</span>,<br />up in under a minute." data-zh="属于你自己的<span class='grad'>覆盖网络</span>，<br />一分钟内跑起来。">Your own <span class="grad">overlay network</span>,<br />up in under a minute.</h1>
+    <p class="sub" data-en="Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected." data-zh="Callsign 为你提供一个私有、加密的覆盖网络，内置 Web 管理后台 —— 一条命令部署服务器，下载客户端，即刻连通。">Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="#deploy">🚀 Deploy a server</a>
-      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">⬇️ Download client</a>
+      <a class="btn btn-primary" href="#deploy" data-en="🚀 Deploy a server" data-zh="🚀 部署服务器">🚀 Deploy a server</a>
+      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="⬇️ Download client" data-zh="⬇️ 下载客户端">⬇️ Download client</a>
     </div>
   </div>
 </header>
@@ -168,30 +174,30 @@
 <section id="features">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">What you get</div>
-      <h2>Everything you need, nothing you don't</h2>
-      <p>A lightweight overlay network with the management tools built right in.</p>
+      <div class="eyebrow" data-en="What you get" data-zh="你得到什么">What you get</div>
+      <h2 data-en="Everything you need, nothing you don't" data-zh="所需全都有，多余一概无">Everything you need, nothing you don't</h2>
+      <p data-en="A lightweight overlay network with the management tools built right in." data-zh="轻量级覆盖网络，管理工具开箱即用。">A lightweight overlay network with the management tools built right in.</p>
     </div>
     <div class="grid">
       <div class="card">
         <div class="ico">🛰️</div>
-        <h3>Overlay tunnel</h3>
-        <p>WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
+        <h3 data-en="Overlay tunnel" data-zh="覆盖隐道">Overlay tunnel</h3>
+        <p data-en="WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path." data-zh="WebSocket 控制与隐道双平面，逐设备会话令牌，配合 Linux <code>tun</code> 数据通道。">WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
       </div>
       <div class="card">
         <div class="ico">🎛️</div>
-        <h3>Admin console</h3>
-        <p>Role-based web UI to manage users, tokens, expiry, and access — with live system health at a glance.</p>
+        <h3 data-en="Admin console" data-zh="管理控制台">Admin console</h3>
+        <p data-en="Role-based web UI to manage users, tokens, expiry, and access — with live system health at a glance." data-zh="基于角色的 Web 界面，管理用户、令牌、有效期与访问权限 —— 系统状态一目了然。">Role-based web UI to manage users, tokens, expiry, and access — with live system health at a glance.</p>
       </div>
       <div class="card">
         <div class="ico">🔐</div>
-        <h3>Secure by default</h3>
-        <p>Hashed credentials, anti-spoofing, DPAPI-encrypted client tokens, and hardened nginx out of the box.</p>
+        <h3 data-en="Secure by default" data-zh="默认即安全">Secure by default</h3>
+        <p data-en="Hashed credentials, anti-spoofing, DPAPI-encrypted client tokens, and hardened nginx out of the box." data-zh="凭据哈希存储、防源欺骗、DPAPI 加密客户端令牌，以及开箱即用的加固 nginx。">Hashed credentials, anti-spoofing, DPAPI-encrypted client tokens, and hardened nginx out of the box.</p>
       </div>
       <div class="card">
         <div class="ico">⚡</div>
-        <h3>One-command install</h3>
-        <p>A single script provisions TLS, nginx, systemd units, and the seed admin — then starts everything.</p>
+        <h3 data-en="One-command install" data-zh="一条命令安装">One-command install</h3>
+        <p data-en="A single script provisions TLS, nginx, systemd units, and the seed admin — then starts everything." data-zh="一个脚本自动配置 TLS、nginx、systemd 服务与初始管理员 —— 然后一键启动。">A single script provisions TLS, nginx, systemd units, and the seed admin — then starts everything.</p>
       </div>
     </div>
   </div>
@@ -200,37 +206,37 @@
 <section id="deploy">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">Get started</div>
-      <h2>Deploy in 3 steps</h2>
-      <p>From zero to a running overlay network in three short steps.</p>
+      <div class="eyebrow" data-en="Get started" data-zh="快速开始">Get started</div>
+      <h2 data-en="Deploy in 3 steps" data-zh="三步完成部署">Deploy in 3 steps</h2>
+      <p data-en="From zero to a running overlay network in three short steps." data-zh="从零到一个运行中的覆盖网络，三步搞定。">From zero to a running overlay network in three short steps.</p>
     </div>
     <div class="deploy">
       <div class="steps">
         <div class="step">
           <div class="num">1</div>
           <div>
-            <h4>Run the installer</h4>
-            <p>One command on any Linux server provisions and starts everything.</p>
+            <h4 data-en="Run the installer" data-zh="运行安装脚本">Run the installer</h4>
+            <p data-en="One command on any Linux server provisions and starts everything." data-zh="在任意 Linux 服务器上一条命令，自动配置并启动一切。">One command on any Linux server provisions and starts everything.</p>
           </div>
         </div>
         <div class="step">
           <div class="num">2</div>
           <div>
-            <h4>Open the admin console</h4>
-            <p>Visit <code>https://&lt;your-domain&gt;/login</code>, set your admin password, and create a user.</p>
+            <h4 data-en="Open the admin console" data-zh="打开管理控制台">Open the admin console</h4>
+            <p data-en="Visit <code>https://&lt;your-domain&gt;/login</code>, set your admin password, and create a user." data-zh="访问 <code>https://&lt;你的域名&gt;/login</code>，设置管理员密码，并创建用户。">Visit <code>https://&lt;your-domain&gt;/login</code>, set your admin password, and create a user.</p>
           </div>
         </div>
         <div class="step">
           <div class="num">3</div>
           <div>
-            <h4>Connect the client</h4>
-            <p>Download the client, paste the access token, and you're on the network.</p>
+            <h4 data-en="Connect the client" data-zh="连接客户端">Connect the client</h4>
+            <p data-en="Download the client, paste the access token, and you're on the network." data-zh="下载客户端，粘贴访问令牌，即可接入网络。">Download the client, paste the access token, and you're on the network.</p>
           </div>
         </div>
       </div>
       <div class="cmd">
         <code id="install-cmd"><span class="tok">wget</span> -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | <span class="tok">sudo</span> CALLSIGN_BRANCH=fast_iteration bash</code>
-        <button class="copy-btn" id="copyBtn" data-cmd="wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash">Copy</button>
+        <button class="copy-btn" id="copyBtn" data-cmd="wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash" data-en="Copy" data-zh="复制">Copy</button>
       </div>
     </div>
   </div>
@@ -239,20 +245,20 @@
 <section id="security">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">Hardened</div>
-      <h2>Security you don't have to configure</h2>
-      <p>Sensible, strong defaults — fully documented if you want the details.</p>
+      <div class="eyebrow" data-en="Hardened" data-zh="安全加固">Hardened</div>
+      <h2 data-en="Security you don't have to configure" data-zh="无需配置的安全性">Security you don't have to configure</h2>
+      <p data-en="Sensible, strong defaults — fully documented if you want the details." data-zh="合理而强大的默认配置 —— 想深入了解都有完整文档。">Sensible, strong defaults — fully documented if you want the details.</p>
     </div>
     <div class="sec-list">
-      <div class="sec-item"><span class="chk">✓</span><p><b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p><b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p><b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p><b>DPAPI</b>-encrypted client access token at rest on Windows.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p><b>Forced first-login</b> credential change; seeded admin disabled afterward.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login." data-zh="<b>pbkdf2_sha256</b>（12 万轮）+ 逐用户盐值，恒时间比较，登录耗时均衡。"><b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions." data-zh="<b>服务端存储的会话令牌</b>，逐设备分配覆盖 IP 租约 —— 地址不冲突。"><b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate." data-zh="<b>隐道源 IP 防源欺骗</b>，可选的仅 Cloudflare 回源闸门。"><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>." data-zh="每个响应都带 <b>安全响应头</b>（CSP、HSTS、X-Frame-Options）；<code>server_tokens off</code>。"><b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>DPAPI</b>-encrypted client access token at rest on Windows." data-zh="Windows 上客户端访问令牌使用 <b>DPAPI</b> 加密落盘。"><b>DPAPI</b>-encrypted client access token at rest on Windows.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Forced first-login</b> credential change; seeded admin disabled afterward." data-zh="<b>强制首次登录</b>修改凭据；初始管理员随后禁用。"><b>Forced first-login</b> credential change; seeded admin disabled afterward.</p></div>
     </div>
     <div style="text-align:center; margin-top:28px;">
-      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign#security" target="_blank" rel="noopener">Read the full security notes →</a>
+      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign#security" target="_blank" rel="noopener" data-en="Read the full security notes →" data-zh="阅读完整安全说明 →">Read the full security notes →</a>
     </div>
   </div>
 </section>
@@ -260,27 +266,27 @@
 <section id="docs">
   <div class="wrap">
     <div class="section-head">
-      <div class="eyebrow">Go deeper</div>
-      <h2>Documentation &amp; references</h2>
-      <p>Everything beyond the quick start lives here.</p>
+      <div class="eyebrow" data-en="Go deeper" data-zh="深入了解">Go deeper</div>
+      <h2 data-en="Documentation &amp; references" data-zh="文档与参考">Documentation &amp; references</h2>
+      <p data-en="Everything beyond the quick start lives here." data-zh="快速开始之外的一切都在这里。">Everything beyond the quick start lives here.</p>
     </div>
     <div class="doclinks">
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/docs/architecture.md" target="_blank" rel="noopener"><span>🏗️ Architecture</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/install-server.sh" target="_blank" rel="noopener"><span>🧰 Server installer</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/nginx.conf.example" target="_blank" rel="noopener"><span>🌐 Nginx example</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/tree/main/deploy/systemd" target="_blank" rel="noopener"><span>⚙️ Systemd units</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener"><span>🇨🇳 中文文档</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener"><span>⭐ GitHub repo</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/docs/architecture.md" target="_blank" rel="noopener"><span data-en="🏗️ Architecture" data-zh="🏗️ 架构设计">🏗️ Architecture</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/install-server.sh" target="_blank" rel="noopener"><span data-en="🧰 Server installer" data-zh="🧰 服务器安装脚本">🧰 Server installer</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/nginx.conf.example" target="_blank" rel="noopener"><span data-en="🌐 Nginx example" data-zh="🌐 Nginx 示例">🌐 Nginx example</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/tree/main/deploy/systemd" target="_blank" rel="noopener"><span data-en="⚙️ Systemd units" data-zh="⚙️ Systemd 服务">⚙️ Systemd units</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener"><span data-en="🇨🇳 中文文档" data-zh="🇨🇳 中文文档">🇨🇳 中文文档</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener"><span data-en="⭐ GitHub repo" data-zh="⭐ GitHub 仓库">⭐ GitHub repo</span><span>→</span></a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap foot-inner">
-    <div>© 2026 Callsign · Self-hosted overlay network</div>
+    <div data-en="© 2026 Callsign · Self-hosted overlay network" data-zh="© 2026 Callsign · 自托管覆盖网络">© 2026 Callsign · Self-hosted overlay network</div>
     <div class="foot-links">
       <a href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="Releases" data-zh="下载">Releases</a>
       <a href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener">中文</a>
     </div>
   </div>
@@ -292,13 +298,34 @@
     try {
       await navigator.clipboard.writeText(btn.dataset.cmd);
       const old = btn.textContent;
-      btn.textContent = 'Copied!';
+      btn.textContent = lang === 'zh' ? '已复制！' : 'Copied!';
       btn.classList.add('copied');
       setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1600);
     } catch (e) {
-      btn.textContent = 'Press Ctrl+C';
+      btn.textContent = lang === 'zh' ? '请按 Ctrl+C' : 'Press Ctrl+C';
     }
   });
+
+  let lang = localStorage.getItem('callsign-lang');
+  if (!['en', 'zh'].includes(lang)) {
+    lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+
+  function applyLang(l) {
+    lang = l;
+    document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-en]').forEach(el => {
+      const val = el.getAttribute('data-' + l);
+      if (val != null) el.innerHTML = val;
+    });
+    localStorage.setItem('callsign-lang', l);
+  }
+
+  document.getElementById('langBtn').addEventListener('click', () => {
+    applyLang(lang === 'zh' ? 'en' : 'zh');
+  });
+
+  applyLang(lang);
 </script>
 
 </body>
