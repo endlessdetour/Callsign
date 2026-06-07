@@ -38,7 +38,7 @@
 
     <h2 data-en="One-command install" data-zh="一条命令安装">One-command install</h2>
     <p data-en="Run this on the server as root. It installs dependencies, asks for your domain, requests a Let's Encrypt certificate (self-signed fallback), renders the nginx config, generates the access token, writes the systemd units, and starts everything." data-zh="在服务器上以 root 运行。它会安装依赖、询问你的域名、申请 Let's Encrypt 证书（失败则回退自签名）、渲染 nginx 配置、生成访问令牌、写入 systemd 服务并启动一切。">Run this on the server as root. It installs dependencies, asks for your domain, requests a Let's Encrypt certificate (self-signed fallback), renders the nginx config, generates the access token, writes the systemd units, and starts everything.</p>
-    <pre><code>wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash</code></pre>
+    <pre><code>wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo bash</code></pre>
 
     <h2 data-en="Installer options" data-zh="安装选项">Installer options</h2>
     <table>
@@ -50,7 +50,7 @@
       </thead>
       <tbody>
         <tr><td><code>CALLSIGN_DOMAIN</code></td><td data-en="Your domain (asked interactively if omitted)." data-zh="你的域名（省略时会交互询问）。">Your domain (asked interactively if omitted).</td></tr>
-        <tr><td><code>CALLSIGN_BRANCH</code></td><td data-en="Install a specific branch (e.g. <code>fast_iteration</code>)." data-zh="安装指定分支（如 <code>fast_iteration</code>）。">Install a specific branch (e.g. <code>fast_iteration</code>).</td></tr>
+        <tr><td><code>CALLSIGN_BRANCH</code></td><td data-en="Install from a specific branch (defaults to <code>main</code>)." data-zh="从指定分支安装（默认为 <code>main</code>）。">Install from a specific branch (defaults to <code>main</code>).</td></tr>
         <tr><td><code>CALLSIGN_TRUST_CLOUDFLARE</code></td><td data-en="Set <code>1</code> to keep the Cloudflare-only origin gate in nginx." data-zh="设为 <code>1</code> 以在 nginx 中保留仅 Cloudflare 回源闸门。">Set <code>1</code> to keep the Cloudflare-only origin gate in nginx.</td></tr>
         <tr><td><code>CALLSIGN_REQUEST_SSL_CERT</code></td><td data-en="Set <code>0</code> to skip Let's Encrypt and force a self-signed cert." data-zh="设为 <code>0</code> 跳过 Let's Encrypt，强制使用自签名证书。">Set <code>0</code> to skip Let's Encrypt and force a self-signed cert.</td></tr>
         <tr><td><code>CALLSIGN_LE_EMAIL</code></td><td data-en="Optional email for the Let's Encrypt registration." data-zh="Let's Encrypt 注册用的可选邮箱。">Optional email for the Let's Encrypt registration.</td></tr>
