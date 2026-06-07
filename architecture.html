@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Architecture — Callsign</title>
+<meta name="description" content="How Callsign is structured: control plane, data plane, and client plane." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
+<link rel="stylesheet" href="assets/docs.css" />
+<script src="assets/i18n.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html"><span class="dot"></span> Callsign</a>
+    <div class="nav-right">
+      <a href="index.html#deploy" data-en="Deploy" data-zh="部署">Deploy</a>
+      <a href="security.html" data-en="Security" data-zh="安全">Security</a>
+      <button class="link-btn" data-lang-toggle data-en="中文" data-zh="English">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <div class="eyebrow" data-en="Documentation" data-zh="文档">Documentation</div>
+    <h1 data-en="Architecture" data-zh="架构设计">Architecture</h1>
+    <p class="lede" data-en="How Callsign is structured — three planes that keep control, data, and the client cleanly separated." data-zh="Callsign 的结构 —— 三个平面，把控制、数据与客户端清晰解耦。">How Callsign is structured — three planes that keep control, data, and the client cleanly separated.</p>
+
+    <h2 data-en="Design goals" data-zh="设计目标">Design goals</h2>
+    <ul>
+      <li data-en="Expose only HTTPS on port 443 externally — everything else is closed." data-zh="对外只暴露 443 端口的 HTTPS —— 其余一律关闭。">Expose only HTTPS on port 443 externally — everything else is closed.</li>
+      <li data-en="A driver-oriented client data path (Wintun on Windows)." data-zh="面向驱动的客户端数据通道（Windows 上使用 Wintun）。">A driver-oriented client data path (Wintun on Windows).</li>
+      <li data-en="Validate transport and control flow first, then harden." data-zh="先验证传输与控制流，再逐步加固。">Validate transport and control flow first, then harden.</li>
+    </ul>
+
+    <h2 data-en="The three planes" data-zh="三个平面">The three planes</h2>
+
+    <div class="card">
+      <span class="tag">1 · <span data-en="Control plane" data-zh="控制平面">Control plane</span></span>
+      <p data-en="A Flask app (behind gunicorn + nginx) that bootstraps a device, issues a session token, and handles heartbeat and token validation. It also serves the admin console at <code>/login</code>." data-zh="一个 Flask 应用（运行在 gunicorn + nginx 之后），负责设备引导、签发会话令牌，并处理心跳与令牌校验。它同时在 <code>/login</code> 提供管理控制台。">A Flask app (behind gunicorn + nginx) that bootstraps a device, issues a session token, and handles heartbeat and token validation. It also serves the admin console at <code>/login</code>.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">2 · <span data-en="Data plane" data-zh="数据平面">Data plane</span></span>
+      <p data-en="WebSockets over WSS. It accepts an authenticated tunnel connection and carries binary frames over TLS (terminated at the reverse proxy). Per-device IP leases avoid address collisions." data-zh="基于 WSS 的 WebSocket。它接受经过认证的隧道连接，并通过 TLS（在反向代理处终止）承载二进制帧。逐设备的独立 IP 租约避免地址冲突。">WebSockets over WSS. It accepts an authenticated tunnel connection and carries binary frames over TLS (terminated at the reverse proxy). Per-device IP leases avoid address collisions.</p>
+    </div>
+
+    <div class="card">
+      <span class="tag">3 · <span data-en="Client plane" data-zh="客户端平面">Client plane</span></span>
+      <p data-en="The Windows agent performs bootstrap, keeps a heartbeat loop, connects the tunnel, and exchanges frames through a <code>tun</code> adapter. An adapter abstraction lets the mock adapter be swapped for the real Wintun driver." data-zh="Windows 客户端完成引导、维持心跳循环、连接隧道，并通过 <code>tun</code> 适配器交换数据帧。适配器抽象让模拟适配器可被替换为真实的 Wintun 驱动。">The Windows agent performs bootstrap, keeps a heartbeat loop, connects the tunnel, and exchanges frames through a <code>tun</code> adapter. An adapter abstraction lets the mock adapter be swapped for the real Wintun driver.</p>
+    </div>
+
+    <h2 data-en="Request flow" data-zh="请求流向">Request flow</h2>
+    <pre><code>Client  ──HTTPS──▶  nginx :443  ──▶  Control plane (Flask)   bootstrap / token / heartbeat
+Client  ──WSS────▶  nginx :443  ──▶  Tunnel plane (WebSocket)  authenticated binary frames
+                                  ▲
+                                  └─ everything else → 444 (closed)</code></pre>
+
+    <h2 data-en="Production direction" data-zh="生产方向">Production direction</h2>
+    <ul>
+      <li data-en="Nginx in front for TLS termination and 443-only exposure." data-zh="前置 Nginx 负责 TLS 终止与仅 443 暴露。">Nginx in front for TLS termination and 443-only exposure.</li>
+      <li data-en="Move from a single shared access token toward mTLS + signed short-lived tokens." data-zh="从单一共享访问令牌演进到 mTLS + 签名短时令牌。">Move from a single shared access token toward mTLS + signed short-lived tokens.</li>
+      <li data-en="Replace the mock adapter with Wintun plus route management." data-zh="用 Wintun 加路由管理替换模拟适配器。">Replace the mock adapter with Wintun plus route management.</li>
+      <li data-en="Replace the echo tunnel with real packet forwarding / NAT." data-zh="用真实的数据包转发 / NAT 替换回显隧道。">Replace the echo tunnel with real packet forwarding / NAT.</li>
+    </ul>
+
+    <a class="back" href="index.html" data-en="← Back to home" data-zh="← 返回首页">← Back to home</a>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div data-en="© 2026 Callsign · Self-hosted private network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted private network</div>
+    <div class="foot-links">
+      <a href="index.html" data-en="Home" data-zh="首页">Home</a>
+      <a href="security.html" data-en="Security" data-zh="安全">Security</a>
+      <a href="deploy.html" data-en="Deploy" data-zh="部署">Deploy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

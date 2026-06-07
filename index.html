@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Callsign — Self-hosted overlay network</title>
-<meta name="description" content="Callsign is a self-hosted overlay network with a built-in admin console. Deploy a server with one command, download the client, and you're connected." />
+<title>Callsign — Your own private network</title>
+<meta name="description" content="Callsign links all your devices into one private, encrypted network that you fully own — with a built-in admin console. Deploy the server with one command, download the client, and you're connected." />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
 <style>
   :root {
@@ -154,6 +154,8 @@
   .foot-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
   .foot-links { display: flex; gap: 22px; }
   .foot-links a:hover { color: var(--text); }
+  .link-btn { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; }
+  .link-btn:hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -176,8 +178,8 @@
 <header id="top" class="hero">
   <div class="wrap">
     <span class="badge"><span class="pulse"></span> <span data-en="Self-hosted · One-command deploy" data-zh="自托管 · 一条命令部署">Self-hosted · One-command deploy</span></span>
-    <h1 data-en="Your own <span class='grad'>overlay network</span>,<br />up in under a minute." data-zh="属于你自己的<span class='grad'>覆盖网络</span>，<br />一分钟内跑起来。">Your own <span class="grad">overlay network</span>,<br />up in under a minute.</h1>
-    <p class="sub" data-en="Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected." data-zh="Callsign 为你提供一个私有、加密的覆盖网络，内置 Web 管理后台 —— 一条命令部署服务器，下载客户端，即刻连通。">Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected.</p>
+    <h1 data-en="Your own <span class='grad'>private network</span>,<br />up in under a minute." data-zh="属于你自己的<span class='grad'>私有网络</span>，<br />一分钟内跑起来。">Your own <span class="grad">private network</span>,<br />up in under a minute.</h1>
+    <p class="sub" data-en="Callsign links all your devices into one private, encrypted network that you fully own — with a built-in web admin console. Deploy the server with a single command, download the client, and you're connected." data-zh="Callsign 把你所有设备接入一张私有、加密、完全由你掌控的网络，内置 Web 管理后台 —— 一条命令部署服务器，下载客户端，即刻连通。">Callsign links all your devices into one private, encrypted network that you fully own — with a built-in web admin console. Deploy the server with a single command, download the client, and you're connected.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#deploy" data-en="🚀 Deploy a server" data-zh="🚀 部署服务器">🚀 Deploy a server</a>
       <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="⬇️ Download client" data-zh="⬇️ 下载客户端">⬇️ Download client</a>
@@ -190,13 +192,13 @@
     <div class="section-head">
       <div class="eyebrow" data-en="What you get" data-zh="你得到什么">What you get</div>
       <h2 data-en="Everything you need, nothing you don't" data-zh="所需全都有，多余一概无">Everything you need, nothing you don't</h2>
-      <p data-en="A lightweight overlay network with the management tools built right in." data-zh="轻量级覆盖网络，管理工具开箱即用。">A lightweight overlay network with the management tools built right in.</p>
+      <p data-en="A lightweight private network with the management tools built right in." data-zh="轻量级私有网络，管理工具开箱即用。">A lightweight private network with the management tools built right in.</p>
     </div>
     <div class="grid">
       <div class="card">
         <div class="ico">🛰️</div>
-        <h3 data-en="Overlay tunnel" data-zh="覆盖隐道">Overlay tunnel</h3>
-        <p data-en="WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path." data-zh="WebSocket 控制与隐道双平面，逐设备会话令牌，配合 Linux <code>tun</code> 数据通道。">WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
+        <h3 data-en="Encrypted tunnel" data-zh="加密隧道">Encrypted tunnel</h3>
+        <p data-en="WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path." data-zh="WebSocket 控制与隧道双平面，逐设备会话令牌，配合 Linux <code>tun</code> 数据通道。">WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
       </div>
       <div class="card">
         <div class="ico">🎛️</div>
@@ -258,7 +260,7 @@
     <div class="section-head">
       <div class="eyebrow" data-en="Get started" data-zh="快速开始">Get started</div>
       <h2 data-en="Deploy in 3 steps" data-zh="三步完成部署">Deploy in 3 steps</h2>
-      <p data-en="From zero to a running overlay network in three short steps." data-zh="从零到一个运行中的覆盖网络，三步搞定。">From zero to a running overlay network in three short steps.</p>
+      <p data-en="From zero to a running private network in three short steps." data-zh="从零到一张运行中的私有网络，三步搞定。">From zero to a running private network in three short steps.</p>
     </div>
     <div class="deploy">
       <div class="steps">
@@ -301,14 +303,14 @@
     </div>
     <div class="sec-list">
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login." data-zh="<b>pbkdf2_sha256</b>（12 万轮）+ 逐用户盐值，恒时间比较，登录耗时均衡。"><b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions." data-zh="<b>服务端存储的会话令牌</b>，逐设备分配覆盖 IP 租约 —— 地址不冲突。"><b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions.</p></div>
-      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate." data-zh="<b>隐道源 IP 防源欺骗</b>，可选的仅 Cloudflare 回源闸门。"><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Server-stored session tokens</b> with a per-device IP lease — no address collisions." data-zh="<b>服务端存储的会话令牌</b>，逐设备分配独立 IP 租约 —— 地址不冲突。"><b>Server-stored session tokens</b> with a per-device IP lease — no address collisions.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate." data-zh="<b>隧道源 IP 防伪造</b>，可选的仅 Cloudflare 回源闸门。"><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>." data-zh="每个响应都带 <b>安全响应头</b>（CSP、HSTS、X-Frame-Options）；<code>server_tokens off</code>。"><b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>DPAPI</b>-encrypted client access token at rest on Windows." data-zh="Windows 上客户端访问令牌使用 <b>DPAPI</b> 加密落盘。"><b>DPAPI</b>-encrypted client access token at rest on Windows.</p></div>
       <div class="sec-item"><span class="chk">✓</span><p data-en="<b>Forced first-login</b> credential change; seeded admin disabled afterward." data-zh="<b>强制首次登录</b>修改凭据；初始管理员随后禁用。"><b>Forced first-login</b> credential change; seeded admin disabled afterward.</p></div>
     </div>
     <div style="text-align:center; margin-top:28px;">
-      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign#security" target="_blank" rel="noopener" data-en="Read the full security notes →" data-zh="阅读完整安全说明 →">Read the full security notes →</a>
+      <a class="btn btn-ghost" href="security.html" data-en="Read the full security notes →" data-zh="阅读完整安全说明 →">Read the full security notes →</a>
     </div>
   </div>
 </section>
@@ -318,26 +320,25 @@
     <div class="section-head">
       <div class="eyebrow" data-en="Go deeper" data-zh="深入了解">Go deeper</div>
       <h2 data-en="Documentation &amp; references" data-zh="文档与参考">Documentation &amp; references</h2>
-      <p data-en="Everything beyond the quick start lives here." data-zh="快速开始之外的一切都在这里。">Everything beyond the quick start lives here.</p>
+      <p data-en="Everything beyond the quick start — all on this site, no detours." data-zh="快速开始之外的一切 —— 全在本站，无需跳转。">Everything beyond the quick start — all on this site, no detours.</p>
     </div>
     <div class="doclinks">
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/docs/architecture.md" target="_blank" rel="noopener"><span data-en="🏗️ Architecture" data-zh="🏗️ 架构设计">🏗️ Architecture</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/install-server.sh" target="_blank" rel="noopener"><span data-en="🧰 Server installer" data-zh="🧰 服务器安装脚本">🧰 Server installer</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/nginx.conf.example" target="_blank" rel="noopener"><span data-en="🌐 Nginx example" data-zh="🌐 Nginx 示例">🌐 Nginx example</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/tree/main/deploy/systemd" target="_blank" rel="noopener"><span data-en="⚙️ Systemd units" data-zh="⚙️ Systemd 服务">⚙️ Systemd units</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener"><span data-en="🇨🇳 中文文档" data-zh="🇨🇳 中文文档">🇨🇳 中文文档</span><span>→</span></a>
-      <a class="doclink" href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener"><span data-en="⭐ GitHub repo" data-zh="⭐ GitHub 仓库">⭐ GitHub repo</span><span>→</span></a>
+      <a class="doclink" href="architecture.html"><span data-en="🏗️ Architecture" data-zh="🏗️ 架构设计">🏗️ Architecture</span><span>→</span></a>
+      <a class="doclink" href="deploy.html"><span data-en="🧰 Deploy &amp; config" data-zh="🧰 部署与配置">🧰 Deploy &amp; config</span><span>→</span></a>
+      <a class="doclink" href="security.html"><span data-en="🔐 Security" data-zh="🔐 安全模型">🔐 Security</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener"><span data-en="⬇️ Download client" data-zh="⬇️ 下载客户端">⬇️ Download client</span><span>↗</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener"><span data-en="⭐ GitHub repo" data-zh="⭐ GitHub 仓库">⭐ GitHub repo</span><span>↗</span></a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap foot-inner">
-    <div data-en="© 2026 Callsign · Self-hosted overlay network" data-zh="© 2026 Callsign · 自托管覆盖网络">© 2026 Callsign · Self-hosted overlay network</div>
+    <div data-en="© 2026 Callsign · Self-hosted private network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted private network</div>
     <div class="foot-links">
       <a href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="Releases" data-zh="下载">Releases</a>
-      <a href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener">中文</a>
+      <button class="link-btn" id="footLangBtn" data-en="中文" data-zh="English">中文</button>
     </div>
   </div>
 </footer>
@@ -358,7 +359,13 @@
 
   let lang = localStorage.getItem('callsign-lang');
   if (!['en', 'zh'].includes(lang)) {
-    lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    const prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    lang = 'en';
+    for (const p of prefs) {
+      const tag = (p || '').toLowerCase();
+      if (tag.startsWith('zh')) { lang = 'zh'; break; }
+      if (tag.startsWith('en')) { lang = 'en'; break; }
+    }
   }
 
   function applyLang(l) {
@@ -371,9 +378,10 @@
     localStorage.setItem('callsign-lang', l);
   }
 
-  document.getElementById('langBtn').addEventListener('click', () => {
-    applyLang(lang === 'zh' ? 'en' : 'zh');
-  });
+  function toggleLang() { applyLang(lang === 'zh' ? 'en' : 'zh'); }
+
+  document.getElementById('langBtn').addEventListener('click', toggleLang);
+  document.getElementById('footLangBtn').addEventListener('click', toggleLang);
 
   applyLang(lang);
 </script>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deploy &amp; configuration — Callsign</title>
+<meta name="description" content="Full deployment reference for Callsign: prerequisites, one-command install, environment variables, nginx config, and systemd services." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
+<link rel="stylesheet" href="assets/docs.css" />
+<script src="assets/i18n.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html"><span class="dot"></span> Callsign</a>
+    <div class="nav-right">
+      <a href="architecture.html" data-en="Architecture" data-zh="架构">Architecture</a>
+      <a href="security.html" data-en="Security" data-zh="安全">Security</a>
+      <button class="link-btn" data-lang-toggle data-en="中文" data-zh="English">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <div class="eyebrow" data-en="Documentation" data-zh="文档">Documentation</div>
+    <h1 data-en="Deploy &amp; configuration" data-zh="部署与配置">Deploy &amp; configuration</h1>
+    <p class="lede" data-en="Everything the one-command installer sets up for you — and the knobs you can turn." data-zh="一条命令安装脚本为你配置的一切 —— 以及你可以调整的开关。">Everything the one-command installer sets up for you — and the knobs you can turn.</p>
+
+    <h2 data-en="Prerequisites" data-zh="前置准备">Prerequisites</h2>
+    <ul>
+      <li data-en="A <b>domain</b> with a DNS <code>A</code> record pointing at your server's public IP." data-zh="一个<b>域名</b>，并有一条 DNS <code>A</code> 记录指向服务器公网 IP。">A <b>domain</b> with a DNS <code>A</code> record pointing at your server's public IP.</li>
+      <li data-en="A <b>Debian/Ubuntu</b> server with root access (the installer uses <code>apt</code>)." data-zh="一台有 root 权限的 <b>Debian/Ubuntu</b> 服务器（脚本使用 <code>apt</code>）。">A <b>Debian/Ubuntu</b> server with root access (the installer uses <code>apt</code>).</li>
+      <li data-en="Inbound TCP <b>80</b> and <b>443</b> open — port 80 is needed for the automatic Let's Encrypt certificate." data-zh="放行入站 TCP <b>80</b> 与 <b>443</b> —— 端口 80 用于自动签发 Let's Encrypt 证书。">Inbound TCP <b>80</b> and <b>443</b> open — port 80 is needed for the automatic Let's Encrypt certificate.</li>
+      <li data-en="Recommended: <b>Cloudflare</b> in front to hide your origin IP." data-zh="推荐：前置 <b>Cloudflare</b> 隐藏源站 IP。">Recommended: <b>Cloudflare</b> in front to hide your origin IP.</li>
+    </ul>
+
+    <h2 data-en="One-command install" data-zh="一条命令安装">One-command install</h2>
+    <p data-en="Run this on the server as root. It installs dependencies, asks for your domain, requests a Let's Encrypt certificate (self-signed fallback), renders the nginx config, generates the access token, writes the systemd units, and starts everything." data-zh="在服务器上以 root 运行。它会安装依赖、询问你的域名、申请 Let's Encrypt 证书（失败则回退自签名）、渲染 nginx 配置、生成访问令牌、写入 systemd 服务并启动一切。">Run this on the server as root. It installs dependencies, asks for your domain, requests a Let's Encrypt certificate (self-signed fallback), renders the nginx config, generates the access token, writes the systemd units, and starts everything.</p>
+    <pre><code>wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash</code></pre>
+
+    <h2 data-en="Installer options" data-zh="安装选项">Installer options</h2>
+    <table>
+      <thead>
+        <tr>
+          <th data-en="Environment variable" data-zh="环境变量">Environment variable</th>
+          <th data-en="Effect" data-zh="作用">Effect</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>CALLSIGN_DOMAIN</code></td><td data-en="Your domain (asked interactively if omitted)." data-zh="你的域名（省略时会交互询问）。">Your domain (asked interactively if omitted).</td></tr>
+        <tr><td><code>CALLSIGN_BRANCH</code></td><td data-en="Install a specific branch (e.g. <code>fast_iteration</code>)." data-zh="安装指定分支（如 <code>fast_iteration</code>）。">Install a specific branch (e.g. <code>fast_iteration</code>).</td></tr>
+        <tr><td><code>CALLSIGN_TRUST_CLOUDFLARE</code></td><td data-en="Set <code>1</code> to keep the Cloudflare-only origin gate in nginx." data-zh="设为 <code>1</code> 以在 nginx 中保留仅 Cloudflare 回源闸门。">Set <code>1</code> to keep the Cloudflare-only origin gate in nginx.</td></tr>
+        <tr><td><code>CALLSIGN_REQUEST_SSL_CERT</code></td><td data-en="Set <code>0</code> to skip Let's Encrypt and force a self-signed cert." data-zh="设为 <code>0</code> 跳过 Let's Encrypt，强制使用自签名证书。">Set <code>0</code> to skip Let's Encrypt and force a self-signed cert.</td></tr>
+        <tr><td><code>CALLSIGN_LE_EMAIL</code></td><td data-en="Optional email for the Let's Encrypt registration." data-zh="Let's Encrypt 注册用的可选邮箱。">Optional email for the Let's Encrypt registration.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 data-en="Server environment file" data-zh="服务端环境文件">Server environment file</h2>
+    <p data-en="The installer writes <code>/etc/proxy-server.env</code> (mode 0600). Key settings:" data-zh="安装脚本会写入 <code>/etc/proxy-server.env</code>（权限 0600）。关键配置：">The installer writes <code>/etc/proxy-server.env</code> (mode 0600). Key settings:</p>
+    <pre><code># Mandatory access token for all control/tunnel HTTP requests.
+CALLSIGN_ACCESS_TOKEN=&lt;generated-strong-random-token&gt;
+
+# Control endpoint used by the tunnel service for token validation.
+CONTROL_VALIDATE_URL=http://127.0.0.1:5000/api/v1/validate
+
+# Public WSS endpoint returned to clients during bootstrap.
+CALLSIGN_TUNNEL_PUBLIC_URL=wss://&lt;your-domain&gt;/connect-ws
+
+# Keep this path consistent across services and the reverse proxy.
+CALLSIGN_TUNNEL_PATH=/connect-ws
+
+# Tunnel mode: tun = real forwarding, echo = debug-only.
+CALLSIGN_TUN_MODE=tun
+
+# Session TTL for the control service (seconds).
+CALLSIGN_SESSION_TTL=3600</code></pre>
+
+    <h2 data-en="nginx reverse proxy" data-zh="nginx 反向代理">nginx reverse proxy</h2>
+    <p data-en="The installer renders this from the example template, substituting your domain and certificate paths. Only 443 is open; everything else returns 444." data-zh="安装脚本基于示例模板渲染此配置，替换你的域名与证书路径。仅开放 443，其余一律返回 444。">The installer renders this from the example template, substituting your domain and certificate paths. Only 443 is open; everything else returns 444.</p>
+    <pre><code>upstream control_plane { server 127.0.0.1:5000; }
+upstream tunnel_plane  { server 127.0.0.1:8443; }
+
+server {
+    listen 443 ssl http2;
+    server_name &lt;your-domain&gt;;
+
+    ssl_certificate     /etc/letsencrypt/live/&lt;your-domain&gt;/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/&lt;your-domain&gt;/privkey.pem;
+
+    # Optional Cloudflare-only origin gate:
+    if ($from_cloudflare = 0) { return 444; }
+
+    location /api/ {
+        proxy_pass http://control_plane;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location = /login {
+        proxy_pass http://control_plane/login;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location /connect-ws {
+        proxy_pass http://tunnel_plane/connect-ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600;
+    }
+
+    # Everything else is closed.
+    location / { return 444; }
+}</code></pre>
+
+    <h2 data-en="systemd services" data-zh="systemd 服务">systemd services</h2>
+    <p data-en="Three units are installed and enabled, so the stack survives reboots:" data-zh="会安装并启用三个服务单元，使整套服务在重启后依然运行：">Three units are installed and enabled, so the stack survives reboots:</p>
+    <table>
+      <thead>
+        <tr>
+          <th data-en="Unit" data-zh="单元">Unit</th>
+          <th data-en="Role" data-zh="职责">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>proxy-control.service</code></td><td data-en="Control plane (Flask under gunicorn) + admin console." data-zh="控制平面（gunicorn 下的 Flask）+ 管理控制台。">Control plane (Flask under gunicorn) + admin console.</td></tr>
+        <tr><td><code>proxy-tunnel.service</code></td><td data-en="WebSocket tunnel / data plane." data-zh="WebSocket 隧道 / 数据平面。">WebSocket tunnel / data plane.</td></tr>
+        <tr><td><code>callsign-nat.service</code></td><td data-en="Sets up NAT / forwarding for the private-network <code>tun</code> interface." data-zh="为私有网络 <code>tun</code> 接口配置 NAT / 转发。">Sets up NAT / forwarding for the private-network <code>tun</code> interface.</td></tr>
+      </tbody>
+    </table>
+    <pre><code># Check status / logs
+systemctl status proxy-control.service proxy-tunnel.service callsign-nat.service
+journalctl -u proxy-control.service -f</code></pre>
+
+    <h2 data-en="First login" data-zh="首次登录">First login</h2>
+    <p data-en="Open <code>https://&lt;your-domain&gt;/login</code>. The installer prints the seeded admin credentials and writes them to <code>/etc/callsign/initial_admin_credentials.txt</code> (root only, mode 0600). On first login you must set a new admin username and password; the seeded account is then disabled." data-zh="打开 <code>https://&lt;你的域名&gt;/login</code>。安装脚本会打印初始管理员凭据，并写入 <code>/etc/callsign/initial_admin_credentials.txt</code>（仅 root，权限 0600）。首次登录必须设置新的管理员用户名与密码；初始账户随后被禁用。">Open <code>https://&lt;your-domain&gt;/login</code>. The installer prints the seeded admin credentials and writes them to <code>/etc/callsign/initial_admin_credentials.txt</code> (root only, mode 0600). On first login you must set a new admin username and password; the seeded account is then disabled.</p>
+
+    <h2 data-en="Connect a client" data-zh="连接客户端">Connect a client</h2>
+    <p data-en="Download the Windows client from Releases, enter your Control URL (<code>https://&lt;your-domain&gt;</code>) and the access token, then connect. The token is encrypted at rest with DPAPI." data-zh="从 Releases 下载 Windows 客户端，填入 Control URL（<code>https://&lt;你的域名&gt;</code>）与访问令牌，然后连接。令牌会用 DPAPI 加密落盘。">Download the Windows client from Releases, enter your Control URL (<code>https://&lt;your-domain&gt;</code>) and the access token, then connect. The token is encrypted at rest with DPAPI.</p>
+
+    <a class="back" href="index.html" data-en="← Back to home" data-zh="← 返回首页">← Back to home</a>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div data-en="© 2026 Callsign · Self-hosted private network" data-zh="© 2026 Callsign · 自托管私有网络">© 2026 Callsign · Self-hosted private network</div>
+    <div class="foot-links">
+      <a href="index.html" data-en="Home" data-zh="首页">Home</a>
+      <a href="architecture.html" data-en="Architecture" data-zh="架构">Architecture</a>
+      <a href="security.html" data-en="Security" data-zh="安全">Security</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
