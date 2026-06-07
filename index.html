@@ -359,7 +359,13 @@
 
   let lang = localStorage.getItem('callsign-lang');
   if (!['en', 'zh'].includes(lang)) {
-    lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    const prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    lang = 'en';
+    for (const p of prefs) {
+      const tag = (p || '').toLowerCase();
+      if (tag.startsWith('zh')) { lang = 'zh'; break; }
+      if (tag.startsWith('en')) { lang = 'en'; break; }
+    }
   }
 
   function applyLang(l) {
