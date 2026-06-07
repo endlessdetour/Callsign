@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Callsign — Self-hosted overlay network</title>
+<meta name="description" content="Callsign is a self-hosted overlay network with a built-in admin console. Deploy a server with one command, download the client, and you're connected." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>" />
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-soft: #111726;
+    --card: rgba(255, 255, 255, 0.04);
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #e6edf6;
+    --muted: #93a1b5;
+    --brand: #38bdf8;
+    --brand-2: #6366f1;
+    --accent: #34d399;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(99,102,241,0.18), transparent 60%),
+                radial-gradient(900px 500px at 0% 0%, rgba(56,189,248,0.14), transparent 55%),
+                var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(10, 14, 26, 0.7);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: 0.3px; }
+  .logo .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+  .nav-links { display: flex; gap: 26px; align-items: center; font-size: 14px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { padding: 8px 16px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff !important; font-weight: 600; }
+  @media (max-width: 720px) { .nav-links a:not(.nav-cta) { display: none; } }
+
+  /* Hero */
+  .hero { text-align: center; padding: 96px 0 72px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 13px; color: var(--muted); background: var(--card); margin-bottom: 28px;
+  }
+  .badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+  .hero h1 { font-size: clamp(38px, 6vw, 68px); line-height: 1.05; font-weight: 800; letter-spacing: -1px; }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--brand), var(--brand-2) 60%, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p.sub { max-width: 660px; margin: 24px auto 0; font-size: clamp(16px, 2.2vw, 20px); color: var(--muted); }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 26px; border-radius: 12px; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--border); transition: transform .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; border-color: transparent; }
+  .btn-ghost { background: var(--card); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--brand); }
+
+  /* Section */
+  section { padding: 56px 0; }
+  .section-head { text-align: center; margin-bottom: 44px; }
+  .section-head .eyebrow { color: var(--brand); font-weight: 600; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .section-head h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 700; margin-top: 10px; letter-spacing: -0.5px; }
+  .section-head p { color: var(--muted); margin-top: 12px; max-width: 580px; margin-left: auto; margin-right: auto; }
+
+  /* Feature grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 26px; transition: transform .18s ease, border-color .18s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(56,189,248,0.4); }
+  .card .ico { font-size: 26px; margin-bottom: 14px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 14.5px; }
+
+  /* Steps / deploy */
+  .deploy { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 22px; padding: 40px; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; margin-bottom: 32px; }
+  .step { display: flex; gap: 14px; align-items: flex-start; }
+  .step .num {
+    flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    font-weight: 700; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff;
+  }
+  .step h4 { font-size: 15.5px; }
+  .step p { color: var(--muted); font-size: 14px; }
+  .step code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+
+  .cmd {
+    display: flex; align-items: center; gap: 14px; justify-content: space-between;
+    background: #060911; border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 13.5px;
+    overflow-x: auto;
+  }
+  .cmd code { color: #cbe7ff; white-space: nowrap; }
+  .cmd code .tok { color: var(--accent); }
+  .copy-btn {
+    flex: none; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text);
+    padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; transition: all .15s ease;
+  }
+  .copy-btn:hover { border-color: var(--brand); color: var(--brand); }
+  .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+
+  /* Security strip */
+  .sec-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .sec-item { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .sec-item .chk { color: var(--accent); font-weight: 700; flex: none; }
+  .sec-item p { font-size: 14px; color: var(--muted); }
+  .sec-item b { color: var(--text); font-weight: 600; }
+
+  /* Docs links */
+  .doclinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .doclink { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; transition: border-color .15s ease, transform .15s ease; }
+  .doclink:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .doclink span:last-child { color: var(--muted); }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--border); padding: 40px 0; margin-top: 40px; color: var(--muted); font-size: 14px; }
+  .foot-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .foot-links { display: flex; gap: 22px; }
+  .foot-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="#top"><span class="dot"></span> Callsign</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#deploy">Deploy</a>
+      <a href="#security">Security</a>
+      <a href="#docs">Docs</a>
+      <a class="nav-cta" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">Download</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top" class="hero">
+  <div class="wrap">
+    <span class="badge"><span class="pulse"></span> Self-hosted · One-command deploy</span>
+    <h1>Your own <span class="grad">overlay network</span>,<br />up in under a minute.</h1>
+    <p class="sub">Callsign gives you a private, encrypted overlay network with a built-in web admin console — deploy the server with a single command, download the client, and you're connected.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#deploy">🚀 Deploy a server</a>
+      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">⬇️ Download client</a>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What you get</div>
+      <h2>Everything you need, nothing you don't</h2>
+      <p>A lightweight overlay network with the management tools built right in.</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🛰️</div>
+        <h3>Overlay tunnel</h3>
+        <p>WebSocket control &amp; tunnel planes with per-device session tokens and a Linux <code>tun</code> data path.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🎛️</div>
+        <h3>Admin console</h3>
+        <p>Role-based web UI to manage users, tokens, expiry, and access — with live system health at a glance.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🔐</div>
+        <h3>Secure by default</h3>
+        <p>Hashed credentials, anti-spoofing, DPAPI-encrypted client tokens, and hardened nginx out of the box.</p>
+      </div>
+      <div class="card">
+        <div class="ico">⚡</div>
+        <h3>One-command install</h3>
+        <p>A single script provisions TLS, nginx, systemd units, and the seed admin — then starts everything.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="deploy">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Get started</div>
+      <h2>Deploy in 3 steps</h2>
+      <p>From zero to a running overlay network in three short steps.</p>
+    </div>
+    <div class="deploy">
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div>
+            <h4>Run the installer</h4>
+            <p>One command on any Linux server provisions and starts everything.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div>
+            <h4>Open the admin console</h4>
+            <p>Visit <code>https://&lt;your-domain&gt;/login</code>, set your admin password, and create a user.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div>
+            <h4>Connect the client</h4>
+            <p>Download the client, paste the access token, and you're on the network.</p>
+          </div>
+        </div>
+      </div>
+      <div class="cmd">
+        <code id="install-cmd"><span class="tok">wget</span> -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | <span class="tok">sudo</span> CALLSIGN_BRANCH=fast_iteration bash</code>
+        <button class="copy-btn" id="copyBtn" data-cmd="wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/fast_iteration/deploy/install-server.sh | sudo CALLSIGN_BRANCH=fast_iteration bash">Copy</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Hardened</div>
+      <h2>Security you don't have to configure</h2>
+      <p>Sensible, strong defaults — fully documented if you want the details.</p>
+    </div>
+    <div class="sec-list">
+      <div class="sec-item"><span class="chk">✓</span><p><b>pbkdf2_sha256</b> (120k rounds) + per-user salt, constant-time compare, timing-equalized login.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p><b>Server-stored session tokens</b> with per-device overlay IP leases — no address collisions.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p><b>Tunnel source-IP anti-spoofing</b> and an optional Cloudflare-only origin gate.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p><b>Security headers</b> (CSP, HSTS, X-Frame-Options) on every response; <code>server_tokens off</code>.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p><b>DPAPI</b>-encrypted client access token at rest on Windows.</p></div>
+      <div class="sec-item"><span class="chk">✓</span><p><b>Forced first-login</b> credential change; seeded admin disabled afterward.</p></div>
+    </div>
+    <div style="text-align:center; margin-top:28px;">
+      <a class="btn btn-ghost" href="https://github.com/endlessdetour/Callsign#security" target="_blank" rel="noopener">Read the full security notes →</a>
+    </div>
+  </div>
+</section>
+
+<section id="docs">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Go deeper</div>
+      <h2>Documentation &amp; references</h2>
+      <p>Everything beyond the quick start lives here.</p>
+    </div>
+    <div class="doclinks">
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/docs/architecture.md" target="_blank" rel="noopener"><span>🏗️ Architecture</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/install-server.sh" target="_blank" rel="noopener"><span>🧰 Server installer</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/deploy/nginx.conf.example" target="_blank" rel="noopener"><span>🌐 Nginx example</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/tree/main/deploy/systemd" target="_blank" rel="noopener"><span>⚙️ Systemd units</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener"><span>🇨🇳 中文文档</span><span>→</span></a>
+      <a class="doclink" href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener"><span>⭐ GitHub repo</span><span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>© 2026 Callsign · Self-hosted overlay network</div>
+    <div class="foot-links">
+      <a href="https://github.com/endlessdetour/Callsign" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/endlessdetour/Callsign/blob/main/README.zh-CN.md" target="_blank" rel="noopener">中文</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const btn = document.getElementById('copyBtn');
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.cmd);
+      const old = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1600);
+    } catch (e) {
+      btn.textContent = 'Press Ctrl+C';
+    }
+  });
+</script>
+
+</body>
+</html>
