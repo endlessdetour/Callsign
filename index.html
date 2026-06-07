@@ -123,7 +123,24 @@
   .prep-body p { color: var(--muted); font-size: 14.5px; margin-bottom: 12px; }
   .prep-body code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
   .prep-link { display: inline-block; color: var(--brand); font-size: 14px; font-weight: 600; }
-  .prep-link:hover { text-decoration: underline; }  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; margin-bottom: 32px; }
+  .prep-link:hover { text-decoration: underline; }
+  /* Client usage */
+  #client { background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .client-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 26px; }
+  .client-step { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; transition: border-color .18s ease, transform .18s ease; }
+  .client-step:hover { border-color: rgba(56,189,248,0.4); transform: translateY(-3px); }
+  .client-step .cs-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .client-step .cs-num { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; }
+  .client-step h4 { font-size: 16px; }
+  .client-step p { color: var(--muted); font-size: 14.5px; }
+  .client-step p + p { margin-top: 8px; }
+  .client-step code { background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  .client-step b { color: var(--text); }
+  .client-note { display: flex; gap: 12px; align-items: flex-start; background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.25); border-radius: 12px; padding: 16px 18px; }
+  .client-note .ni { flex: none; font-size: 18px; }
+  .client-note p { color: var(--muted); font-size: 14px; }
+  .client-note b { color: var(--text); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; margin-bottom: 32px; }
   .step { display: flex; gap: 14px; align-items: flex-start; }
   .step .num {
     flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
@@ -184,6 +201,7 @@
       <a href="#features" data-en="Features" data-zh="功能">Features</a>
       <a href="#prepare" data-en="Prep" data-zh="准备">Prep</a>
       <a href="#deploy" data-en="Deploy" data-zh="部署">Deploy</a>
+      <a href="#client" data-en="Client" data-zh="客户端">Client</a>
       <a href="#security" data-en="Security" data-zh="安全">Security</a>
       <a href="#docs" data-en="Docs" data-zh="文档">Docs</a>
       <a class="nav-cta" href="https://github.com/endlessdetour/Callsign/releases" target="_blank" rel="noopener" data-en="Download" data-zh="下载">Download</a>
@@ -332,6 +350,47 @@
         <div class="cmd-scroll"><code id="install-cmd"><span class="tok">wget</span> -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | <span class="tok">sudo</span> bash</code></div>
         <button class="copy-btn" id="copyBtn" data-cmd="wget -qO- https://raw.githubusercontent.com/endlessdetour/Callsign/main/deploy/install-server.sh | sudo bash" data-en="Copy" data-zh="复制">Copy</button>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="client">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow" data-en="On your devices" data-zh="在你的设备上">On your devices</div>
+      <h2 data-en="Using the Windows client" data-zh="使用 Windows 客户端">Using the Windows client</h2>
+      <p data-en="Server's running and you have an access token? Here's exactly what to do after you download." data-zh="服务器已运行、手里有访问令牌？下面是下载之后该做的每一步。">Server's running and you have an access token? Here's exactly what to do after you download.</p>
+    </div>
+    <div class="client-steps">
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">1</span><h4 data-en="Download the right package" data-zh="下载对应的安装包">Download the right package</h4></div>
+        <p data-en="Grab the build for your CPU from Releases: <code>callsign-windows-amd64.zip</code> for most PCs (Intel/AMD x64), or <code>callsign-windows-arm64.zip</code> for ARM devices like Surface Pro X." data-zh="在 Releases 页面按你的 CPU 选择：大多数电脑（Intel/AMD x64）选 <code>callsign-windows-amd64.zip</code>；Surface Pro X 等 ARM 设备选 <code>callsign-windows-arm64.zip</code>。">Grab the build for your CPU from Releases.</p>
+      </div>
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">2</span><h4 data-en="Unzip it anywhere" data-zh="解压到任意位置">Unzip it anywhere</h4></div>
+        <p data-en="Right-click the <code>.zip</code> &rarr; <b>Extract All</b>. No installer needed — the matching Wintun network driver is already bundled inside the folder." data-zh="右键 <code>.zip</code> &rarr; <b>全部解压</b>。无需安装程序 —— 配套的 Wintun 网络驱动已随文件夹一起打包。">Right-click the <code>.zip</code> &rarr; <b>Extract All</b>. No installer needed.</p>
+      </div>
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">3</span><h4 data-en="Run gui_client.exe" data-zh="运行 gui_client.exe">Run gui_client.exe</h4></div>
+        <p data-en="Double-click <code>gui_client.exe</code>. Windows will ask for <b>administrator permission</b> — click Yes. It's needed to create the virtual network adapter." data-zh="双击 <code>gui_client.exe</code>。Windows 会弹出<b>管理员权限</b>请求 —— 点“是”。创建虚拟网络适配器需要该权限。">Double-click <code>gui_client.exe</code>. Windows will ask for <b>administrator permission</b> — click Yes.</p>
+      </div>
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">4</span><h4 data-en="Fill in two fields" data-zh="填写两个字段">Fill in two fields</h4></div>
+        <p data-en="<b>Control URL</b>: your server, e.g. <code>https://your-domain</code>." data-zh="<b>Control URL</b>：你的服务器地址，如 <code>https://你的域名</code>。"><b>Control URL</b>: your server.</p>
+        <p data-en="<b>Access Token</b>: the token from your admin console account. Click <b>Save</b> to remember it (stored encrypted with Windows DPAPI)." data-zh="<b>Access Token</b>：来自管理控制台账号的令牌。点 <b>Save</b> 保存（使用 Windows DPAPI 加密落盘）。"><b>Access Token</b>: from your console account. Click <b>Save</b>.</p>
+      </div>
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">5</span><h4 data-en="Click Connect" data-zh="点击 Connect">Click Connect</h4></div>
+        <p data-en="Hit <b>Connect</b>. The status flips to connected and the log shows your session — you're on your network." data-zh="点 <b>Connect</b>。状态变为已连接，日志会显示会话 —— 你已接入自己的网络。">Hit <b>Connect</b>. Status flips to connected.</p>
+      </div>
+      <div class="client-step">
+        <div class="cs-top"><span class="cs-num">6</span><h4 data-en="Runs in the tray" data-zh="驻留系统托盘">Runs in the tray</h4></div>
+        <p data-en="Close the window and Callsign keeps running in the <b>system tray</b>. Right-click the tray icon to Connect, Disconnect, or Exit anytime." data-zh="关闭窗口后，Callsign 会继续在<b>系统托盘</b>运行。右键托盘图标可随时连接、断开或退出。">Close the window and it keeps running in the <b>system tray</b>.</p>
+      </div>
+    </div>
+    <div class="client-note">
+      <span class="ni">🔑</span>
+      <p data-en="<b>Where's the token?</b> Your admin creates your account in the console and gives you an access token. Don't have one yet? Ask whoever runs the server, or if that's you — deploy it above first, then create a user in the console." data-zh="<b>令牌从哪来？</b>管理员在控制台为你创建账号并给出访问令牌。还没有？问问运维服务器的人 —— 如果就是你，先按上面部署好服务器，再在控制台创建用户。"><b>Where's the token?</b> Your admin creates your account in the console and gives you an access token.</p>
     </div>
   </div>
 </section>
