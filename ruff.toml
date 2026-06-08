@@ -1,0 +1,5 @@
+# Ruff configuration for Callsign.
+# E402 (module-level import not at top) is intentionally allowed: several
+# scripts and the control app adjust sys.path before importing local modules.
+[lint]
+ignore = ["E402"]
